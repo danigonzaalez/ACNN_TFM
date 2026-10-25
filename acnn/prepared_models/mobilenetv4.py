@@ -74,7 +74,7 @@ def main(exp, image_path, gt_path, seg_path=None, centers_path=None, config=None
     # We set in_chans=4 for R-G-B-NIR and num_classes=24
     model = timm.create_model(
         "mobilenetv4_conv_medium",
-        pretrained=True,
+        pretrained=False,
         in_chans=4,
         num_classes=nclases
     ).to(device)
