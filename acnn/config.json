@@ -1,26 +1,25 @@
 {
     "models": [
-        "acnn",
-        "cnn21_seg"
+        "mobilenetv4"
     ],
-    "EXP_NUMBER": 3,
+    "EXP_NUMBER": 1,
     "SAMPLES": [
         0.05,
         0.05
     ],
     "EPOCHS": 5,
-    "BATCH": 100,
+    "BATCH": 256,
     "SIZEX": 32,
     "DET": 0,
-    "AUM": 0,
+    "AUM": 1,
     "ViTsize": 3,
     "ADA": 3,
     "TEST": 1,
     "COMPUTE_SEG_CENTERS": 0,
     "BASEPATH": ".",
     "OUTPUTDIR": "./results/",
-    "image_path": "../data/z1/z1.raw",
-    "gt_path": "../data/z1/z1_gt_reetiquetado.pgm",
-    "seg_path": "../data/z1/seg.raw",
-    "centers_path": "../data/z1/seg_centers.raw"
+    "image_path": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw/GF2_PMS1__L1A0001064454-MSS1.raw",
+    "gt_path": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks/GF2_PMS1__L1A0001064454-MSS1_grayscale.png",
+    "seg_path": "",
+    "centers_path": ""
 }

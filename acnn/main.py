@@ -3,6 +3,7 @@ import json
 
 from prepared_models.cnn21_seg import main as cnn21_seg
 from prepared_models.acnn import main as acnn
+from prepared_models.mobilenetv4 import main as mobilenetv4
 
 
 from utils.torch_utils import accuracy_mean_deviation
@@ -17,6 +18,7 @@ import plot_results as plr
 model_functions = {
     "cnn21_seg": cnn21_seg,
     "acnn": acnn,
+    "mobilenetv4": mobilenetv4,
 }
 
 
@@ -53,7 +55,7 @@ def main(image_path, gt_path, models, config):
         OA = [0] * EXP_NUMBER
         AA = [0] * EXP_NUMBER
         aa = [0] * EXP_NUMBER
-        ad_results = [{}] * EXP_NUMBER
+        seg_stats = [{}] * EXP_NUMBER
         for exp in range(EXP_NUMBER):
             print(f"Experiment {exp + 1}/{EXP_NUMBER} for model {model}")
             try:
@@ -73,10 +75,10 @@ def main(image_path, gt_path, models, config):
                         )
                         # Unpack based on the length of the result
                         if len(result) == 4:
-                            OA[exp], AA[exp], aa[exp], ad_results[exp] = result
+                            OA[exp], AA[exp], aa[exp], seg_stats[exp] = result
                         else:
                             OA[exp], AA[exp], aa[exp] = result
-                            ad_results[exp] = None  # Set to None if not present
+                            seg_stats[exp] = None  # Set to None if not present
             except KeyError:
                 print(f"Model {model} not found. Skipping...")
                 # Skip to the next model
@@ -101,12 +103,12 @@ def main(image_path, gt_path, models, config):
             "class_aa_dev": aad,
         }
 
-        if ad_results[0] is not None:
+        if seg_stats[0] is not None:
             # Calculate the mean and deviation of the AD results
-            mean_ad_results = calculate_ad_mean_dev(ad_results)
+            mean_ad_results = calculate_ad_mean_dev(seg_stats)
 
             # Add the AD results to the global results
-            results[model]["AD_results"] = mean_ad_results
+            results[model]["Seg_results"] = mean_ad_results
 
     # Print the results
     # print("\nResults:")
