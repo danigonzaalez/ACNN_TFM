@@ -1,0 +1,42 @@
+* Using config file
+* MobileNetV4 exp: 1
+* Device: cuda
+* Memory-mapping RAW PV image: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw/GF2_PMS1__L1A0000564539-MSS1.raw
+* Reading GT mask: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks/GF2_PMS1__L1A0000564539-MSS1_24label.png
+* Selecting training samples (Pixel-level)
+  Num classes: 23
+  Class  # :   total | train |   val |    test
+  Class  1 :  123255 |   100 |    50 |     100
+  Class  2 :       0 |     0 |     0 |       0
+  Class  3 : 22917641 |   100 |    50 |     100
+  Class  4 : 3096299 |   100 |    50 |     100
+  Class  5 :       0 |     0 |     0 |       0
+  Class  6 :  892490 |   100 |    50 |     100
+  Class  7 :   63522 |   100 |    50 |     100
+  Class  8 :       0 |     0 |     0 |       0
+  Class  9 :       0 |     0 |     0 |       0
+  Class 10 :       0 |     0 |     0 |       0
+  Class 11 : 2995088 |   100 |    50 |     100
+  Class 12 :  266249 |   100 |    50 |     100
+  Class 13 :  755854 |   100 |    50 |     100
+  Class 14 : 1111133 |   100 |    50 |     100
+  Class 15 :  294914 |   100 |    50 |     100
+  Class 16 :  445232 |   100 |    50 |     100
+  Class 17 :  176006 |   100 |    50 |     100
+  Class 18 : 2233902 |   100 |    50 |     100
+  Class 19 :       0 |     0 |     0 |       0
+  Class 20 :       0 |     0 |     0 |       0
+  Class 21 : 1045509 |   100 |    50 |     100
+  Class 22 :  117553 |   100 |    50 |     100
+  Class 23 :  114618 |   100 |    50 |     100
+* Training MobileNetV4, exp.1
+  Epoch:   0/2, Val Loss: 3.0918, Acc: 0.0625
+  Epoch:   1/2, Val Loss: 3.2124, Acc: 0.0625
+* Testing MobileNetV4, exp.1
+* Results exp.1:
+  Pixel Accuracy (OA): 6.25%
+  Mean Accuracy (AA):  6.25%
+  Mean IoU (mIoU):     0.39%
+  Freq Weighted IoU:   0.39%
+* Generating RGB classification map
+* Total time: 999 s

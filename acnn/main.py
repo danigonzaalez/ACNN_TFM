@@ -1,23 +1,26 @@
 import argparse
 import json
 
-from prepared_models.cnn21_seg import main as cnn21_seg
-from prepared_models.acnn import main as acnn
+# Comment previous models that use the old dataloader
+# from prepared_models.cnn21_seg import main as cnn21_seg
+# from prepared_models.acnn import main as acnn
+
 from prepared_models.mobilenetv4 import main as mobilenetv4
 
 
 from utils.torch_utils import accuracy_mean_deviation
-from utils.general_utils import calculate_ad_mean_dev, NumpyEncoder
+from utils.general_utils import calculate_seg_mean_dev, NumpyEncoder
 
 import contextlib
 import os
 from datetime import datetime
+import numpy as np
 
-import plot_results as plr
+# import plot_results as plr   # utilities for plotting AD graphics using results file
 
 model_functions = {
-    "cnn21_seg": cnn21_seg,
-    "acnn": acnn,
+    # "cnn21_seg": cnn21_seg,
+    # "acnn": acnn,
     "mobilenetv4": mobilenetv4,
 }
 
@@ -104,16 +107,11 @@ def main(image_path, gt_path, models, config):
         }
 
         if seg_stats[0] is not None:
-            # Calculate the mean and deviation of the AD results
-            mean_ad_results = calculate_ad_mean_dev(seg_stats)
+            # Calculate the mean and deviation of the Segmentation results
+            mean_seg_stats = calculate_seg_mean_dev(seg_stats)
 
-            # Add the AD results to the global results
-            results[model]["Seg_results"] = mean_ad_results
-
-    # Print the results
-    # print("\nResults:")
-    # print(json.dumps(results, indent=4, cls=NumpyEncoder))
-    # print("\n")
+            # Add the Segmentation results to the global results
+            results[model]["Seg_results"] = mean_seg_stats
 
     # Save the results in a file
     # Create results folder if it does not exist
@@ -124,8 +122,24 @@ def main(image_path, gt_path, models, config):
     with open(results_file, "w") as f:
         json.dump(results, f, indent=4, cls=NumpyEncoder)
 
-    # Plot the results
-    plr.plot_results(results_file, config=config)
+    # Print clean summary of the Segmentation results
+    print("\nSummary of the Segmentation results:")
+    print(f"{'Model':<20} {'OA (%)':<15} {'AA (%)':<15} {'mIoU (%)':<15} {'fwIoU (%)':<15}")
+    for model_name in models:
+        if model_name in results:
+            m_OA = np.mean(results[model_name]["OA"])
+            m_AA = np.mean(results[model_name]["AA"])
+            
+            seg_res = results[model_name].get("Seg_results", {})
+            
+            # general_utils.calculate_seg_mean_dev creates {"mean": X, "std_dev": Y}
+            m_mIoU = seg_res.get("mIoU", {}).get("mean", 0)
+            m_fwIoU = seg_res.get("fwIoU", {}).get("mean", 0)
+            
+            print(f"{model_name:<20} {m_OA:<15.2f} {m_AA:<15.2f} {m_mIoU:<15.2f} {m_fwIoU:<15.2f}")
+
+    # Plot the results (COMENTADO: eran gráficos heredados de Anomaly Detection)
+    # plr.plot_results(results_file, config=config)
 
     return None
 

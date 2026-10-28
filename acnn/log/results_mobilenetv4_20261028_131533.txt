@@ -1,0 +1,32 @@
+* Using config file
+* MobileNetV4 exp: 1
+* Device: cpu
+* Memory-mapping RAW PV image: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw/GF2_PMS1__L1A0000564539-MSS1.raw
+* Reading GT mask: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks/GF2_PMS1__L1A0000564539-MSS1_24label.png
+* Selecting training samples (Pixel-level)
+  Num classes: 23
+  Class  # :   total | train |   val |    test
+  Class  1 :  123255 |  6162 |  6162 |  110931
+  Class  2 :       0 |     0 |     0 |       0
+  Class  3 : 22917641 | 1145882 | 1145882 | 20625877
+  Class  4 : 3096299 | 154814 | 154814 | 2786671
+  Class  5 :       0 |     0 |     0 |       0
+  Class  6 :  892490 | 44624 | 44624 |  803242
+  Class  7 :   63522 |  3176 |  3176 |   57170
+  Class  8 :       0 |     0 |     0 |       0
+  Class  9 :       0 |     0 |     0 |       0
+  Class 10 :       0 |     0 |     0 |       0
+  Class 11 : 2995088 | 149754 | 149754 | 2695580
+  Class 12 :  266249 | 13312 | 13312 |  239625
+  Class 13 :  755854 | 37792 | 37792 |  680270
+  Class 14 : 1111133 | 55556 | 55556 | 1000021
+  Class 15 :  294914 | 14745 | 14745 |  265424
+  Class 16 :  445232 | 22261 | 22261 |  400710
+  Class 17 :  176006 |  8800 |  8800 |  158406
+  Class 18 : 2233902 | 111695 | 111695 | 2010512
+  Class 19 :       0 |     0 |     0 |       0
+  Class 20 :       0 |     0 |     0 |       0
+  Class 21 : 1045509 | 52275 | 52275 |  940959
+  Class 22 :  117553 |  5877 |  5877 |  105799
+  Class 23 :  114618 |  5730 |  5730 |  103158
+* Training MobileNetV4, exp.1

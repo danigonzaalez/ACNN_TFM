@@ -10,7 +10,7 @@ import timm
 
 from utils.dataloader import read_rawPV, read_grayscale_mask, generate_rgb_map
 from utils.torch_utils import select_training_samples, HyperDataset, update_lr
-from metrics.metrics import SegmentationMetrics
+from utils.metrics import SegmentationMetrics
 
 # ----------------
 # DEFAULT GLOBALS
@@ -52,7 +52,7 @@ def main(exp, image_path, gt_path, seg_path=None, centers_path=None, config=None
     print(f"* Device: {device}")
 
     # 2. Load data (Memory Mapping)
-    datos, H, V, B = read_rawPV(image_path, bit_depth=16)
+    datos, H, V, B = read_rawPV(image_path)
     truth, H1, V1 = read_grayscale_mask(gt_path)
     
     # 3. Selection training, testing sets (Pixel level)
@@ -60,14 +60,14 @@ def main(exp, image_path, gt_path, seg_path=None, centers_path=None, config=None
         truth, H, V, SIZEX, SIZEX, SAMPLES
     )
     
-    dataset_train = HyperDataset(datos, truth, train_idx, H, V, SIZEX, SIZEX, bit_depth=16)
-    dataset_test = HyperDataset(datos, truth, test_idx, H, V, SIZEX, SIZEX, bit_depth=16)
+    dataset_train = HyperDataset(datos, truth, train_idx, H, V, SIZEX, SIZEX)
+    dataset_test = HyperDataset(datos, truth, test_idx, H, V, SIZEX, SIZEX)
     
     train_loader = DataLoader(dataset_train, BATCH, shuffle=True, num_workers=4, pin_memory=True)
     test_loader = DataLoader(dataset_test, BATCH, shuffle=False, num_workers=4, pin_memory=True)
     
     if len(val_idx) > 0:
-        dataset_val = HyperDataset(datos, truth, val_idx, H, V, SIZEX, SIZEX, bit_depth=16)
+        dataset_val = HyperDataset(datos, truth, val_idx, H, V, SIZEX, SIZEX)
         val_loader = DataLoader(dataset_val, BATCH, shuffle=False, num_workers=4, pin_memory=True)
 
     # 4. Model Definition (timm MobileNetV4)
@@ -180,9 +180,10 @@ def main(exp, image_path, gt_path, seg_path=None, centers_path=None, config=None
     class_aa = [0.0] + (per_class_metrics['acc'] * 100).tolist()
 
     # Generate classification map
-    print("* Generating RGB classification map")
-    img = generate_rgb_map(output_map, truth, H, V)
-    img.save(os.path.join(OUTPUTDIR, f"output_rgb_mobilenetv4_exp{exp}.png"))
+    # COMMENTED UNTIL WE MAKE COMPLETE PREDICTIONS - PENDING TO UNCOMMENT
+    # print("* Generating RGB classification map")
+    # img = generate_rgb_map(output_map, truth, H, V)
+    # img.save(os.path.join(OUTPUTDIR, f"output_rgb_mobilenetv4_exp{exp}.png"))
     
     torch.save(model.state_dict(), os.path.join(OUTPUTDIR, f"model_mobilenetv4_exp{exp}.ckpt"))
 

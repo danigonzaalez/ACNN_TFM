@@ -10,17 +10,17 @@ import math
 # ----------------
 AUM = 1 # Data augmentation enabled by default (1 = ON, 0 = OFF)
 
-def select_patch(data, H, V, sizex, sizey, x, y, bit_depth=16):
+def select_patch(data, H, V, sizex, sizey, x, y):
     """
     Extracts a patch of size (sizex, sizey) around the center pixel (x, y).
-    Reads directly from the memory-mapped array, then normalizes and reorders bands.
+    Reads directly from the memory-mapped array, normalizes (16-bit), and reorders bands.
     """
     x1 = int(x) - int(sizex / 2)
     x2 = int(x) + int(math.ceil(sizex / 2))
     y1 = int(y) - int(sizey / 2)
     y2 = int(y) + int(math.ceil(sizey / 2))
     
-    # Boundary padding/shifting to ensure the patch doesn't go out of bounds
+    # Boundary padding/shifting
     if x1 < 0:
         x1 = 0
         x2 = sizex
@@ -37,13 +37,10 @@ def select_patch(data, H, V, sizex, sizey, x, y, bit_depth=16):
     # Extract patch from memory-mapped array (V, H, B)
     patch = data[y1:y2, x1:x2, :]
     
-    # Lazy Normalization and Band Reordering (applied only to the extracted patch)
-    if bit_depth == 8:
-        patch = patch[:, :, [1, 2, 3, 0]]
-        patch = patch.astype(np.float32) / 255.0
-    elif bit_depth == 16:
-        patch = patch[:, :, [2, 1, 0, 3]]
-        patch = patch.astype(np.float32) / 65535.0
+    # Hardcoded 16-bit logic: Band reordering and Normalization
+    # Original 16 Bits: [B0:Blue, B1:Green, B2:Red, B3:NIR] -> [Red, Green, Blue, NIR]
+    patch = patch[:, :, [2, 1, 0, 3]]
+    patch = patch.astype(np.float32) / 65535.0
         
     # Convert to PyTorch Tensor and permute to (C, H, W)
     patch = torch.FloatTensor(patch).permute(2, 0, 1)
@@ -73,7 +70,7 @@ def select_training_samples(truth, H, V, sizex, sizey, percentages):
     for ind in range(H * V):
         i = ind // H # Row
         j = ind % H  # Col
-        label = truth[ind]
+        label = truth[i, j]   # truth is a 2D matrix of VxH
         
         # Only use pixels where a full patch can fit and label > 0
         if ymin <= i <= ymax and xmin <= j <= xmax and label > 0:
@@ -92,23 +89,29 @@ def select_training_samples(truth, H, V, sizex, sizey, percentages):
     for i in range(num_classes):
         total_samples = len(class_lists[i])
         
-        # Calculate samples for train (tot0) and val (tot1)
+        # Calculate samples for train (tot0), val (tot1), and test (tot2)
         tot0 = percentages[0] if percentages[0] >= 1 else int(percentages[0] * total_samples)
         tot1 = percentages[1] if percentages[1] >= 1 else int(percentages[1] * total_samples)
         
-        if tot0 >= total_samples: tot0 = total_samples // 2
+        if len(percentages) > 2:   # if samples for testing were provided
+            tot2 = percentages[2] if percentages[2] >= 1 else int(percentages[2] * total_samples)
+        else:   # if not provided samples for testing, take the rest
+            tot2 = total_samples - tot0 - tot1
+            
+        if tot0 >= total_samples: tot0 = total_samples // 3
         if tot0 > 0: non_empty_classes += 1
-        if tot1 >= total_samples: tot1 = total_samples // 2
+        if tot1 >= total_samples: tot1 = total_samples // 3
+        if tot2 >= total_samples: tot2 = total_samples // 3
         
         for j in range(total_samples):
             if j < tot0:
                 train_idx.append(class_lists[i][j])
             elif j < (tot0 + tot1):
                 val_idx.append(class_lists[i][j])
-            else:
+            elif j < (tot0 + tot1 + tot2):
                 test_idx.append(class_lists[i][j])
                 
-        print(f"  Class {i+1:2d} : {total_samples:7d} | {tot0:5d} | {tot1:5d} | {total_samples-tot0-tot1:7d}")
+        print(f"  Class {i+1:2d} : {total_samples:7d} | {tot0:5d} | {tot1:5d} | {tot2:7d}")
         
     return train_idx, val_idx, test_idx, num_classes, non_empty_classes
 
@@ -121,7 +124,7 @@ class HyperDataset(Dataset):
     """
     Dataset class that retrieves image patches dynamically from a memory-mapped array.
     """
-    def __init__(self, data, truth, samples, H, V, sizex, sizey, bit_depth=16):
+    def __init__(self, data, truth, samples, H, V, sizex, sizey):
         self.data = data
         self.truth = truth
         self.samples = samples
@@ -129,7 +132,6 @@ class HyperDataset(Dataset):
         self.V = V
         self.sizex = sizex
         self.sizey = sizey
-        self.bit_depth = bit_depth
         
         # Data Augmentation specific for aerial/satellite imagery
         self.transform = transforms.Compose([
@@ -141,16 +143,16 @@ class HyperDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        x = self.samples[idx] % self.H
-        y = self.samples[idx] // self.H
+        x = self.samples[idx] % self.H   # column (x)
+        y = self.samples[idx] // self.H   # row (y)
         
-        patch = select_patch(self.data, self.H, self.V, self.sizex, self.sizey, x, y, self.bit_depth)
+        patch = select_patch(self.data, self.H, self.V, self.sizex, self.sizey, x, y)
         
         if AUM == 1:
             patch = self.transform(patch)
             
         # Neural network outputs 0 to N-1, so we subtract 1 from the truth label
-        target_label = self.truth[self.samples[idx]] - 1
+        target_label = self.truth[y, x] - 1
         
         return patch, target_label
 
