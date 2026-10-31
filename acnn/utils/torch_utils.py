@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import random
 import math
+from PIL import Image
 
 # ----------------
 # GLOBALS
@@ -47,93 +48,81 @@ def select_patch(data, H, V, sizex, sizey, x, y):
     
     return patch
 
+def build_global_samples(mask_paths, H, V, sizex, sizey, samples_train_per_img, samples_val_per_img):
+    """
+    Iterates over all masks efficiently and extracts a fixed number of samples per class per image.
+    Returns global lists of tuples: (img_idx, x, y, label)
+    """
+    print(f"* Building global dataset indexing from {len(mask_paths)} images...")
+    train_samples = []
+    val_samples = []
 
-def select_training_samples(truth, H, V, sizex, sizey, percentages):
-    """
-    Generates index lists for training, validation, and testing samples
-    based on the ground truth mask purely at the pixel level.
-    """
-    print("* Selecting training samples (Pixel-level)")
-    num_classes = np.max(truth)
-    print("  Num classes:", num_classes)
-    
-    # Initialize lists for each class
-    class_lists = [[] for _ in range(num_classes)]
-    
-    # Avoid edges where patches cannot be fully extracted
-    xmin = int(sizex / 2)
-    xmax = H - int(math.ceil(sizex / 2))
-    ymin = int(sizey / 2)
-    ymax = V - int(math.ceil(sizey / 2))
-    
-    # Identify valid pixels for each class across the whole image
-    for ind in range(H * V):
-        i = ind // H # Row
-        j = ind % H  # Col
-        label = truth[i, j]   # truth is a 2D matrix of VxH
+    xmin, xmax = int(sizex / 2), H - int(math.ceil(sizex / 2))
+    ymin, ymax = int(sizey / 2), V - int(math.ceil(sizey / 2))
+
+    for img_idx, mask_path in enumerate(mask_paths):
+        # Read mask using PIL and convert to numpy
+        mask = np.array(Image.open(mask_path))
         
-        # Only use pixels where a full patch can fit and label > 0
-        if ymin <= i <= ymax and xmin <= j <= xmax and label > 0:
-            class_lists[label - 1].append(ind)
-            
-    # Shuffle pixels within each class
-    for i in range(num_classes):
-        random.shuffle(class_lists[i])
-        
-    train_idx = []
-    val_idx = []
-    test_idx = []
-    non_empty_classes = 0
-    
-    print("  Class  # :   total | train |   val |    test")
-    for i in range(num_classes):
-        total_samples = len(class_lists[i])
-        
-        # Calculate samples for train (tot0), val (tot1), and test (tot2)
-        tot0 = percentages[0] if percentages[0] >= 1 else int(percentages[0] * total_samples)
-        tot1 = percentages[1] if percentages[1] >= 1 else int(percentages[1] * total_samples)
-        
-        if len(percentages) > 2:   # if samples for testing were provided
-            tot2 = percentages[2] if percentages[2] >= 1 else int(percentages[2] * total_samples)
-        else:   # if not provided samples for testing, take the rest
-            tot2 = total_samples - tot0 - tot1
-            
-        if tot0 >= total_samples: tot0 = total_samples // 3
-        if tot0 > 0: non_empty_classes += 1
-        if tot1 >= total_samples: tot1 = total_samples // 3
-        if tot2 >= total_samples: tot2 = total_samples // 3
-        
-        for j in range(total_samples):
-            if j < tot0:
-                train_idx.append(class_lists[i][j])
-            elif j < (tot0 + tot1):
-                val_idx.append(class_lists[i][j])
-            elif j < (tot0 + tot1 + tot2):
-                test_idx.append(class_lists[i][j])
+        # Avoid borders and empty pixels using fast numpy vectorization
+        valid_mask = (mask > 0)
+        valid_mask[:ymin, :] = False
+        valid_mask[ymax:, :] = False
+        valid_mask[:, :xmin] = False
+        valid_mask[:, xmax:] = False
+
+        # Get all valid coordinates
+        y_coords, x_coords = np.where(valid_mask)
+        labels = mask[y_coords, x_coords]
+
+        # Group by class (assuming max 24 classes as per dataset spec)
+        class_lists = [[] for _ in range(24)]
+        for y, x, label in zip(y_coords, x_coords, labels):
+            class_lists[label - 1].append((img_idx, x, y, label))
+
+        # Sample limits per image
+        for c in range(24):
+            if len(class_lists[c]) > 0:
+                random.shuffle(class_lists[c])
+                t_samples = class_lists[c][:samples_train_per_img]
+                v_samples = class_lists[c][samples_train_per_img : samples_train_per_img + samples_val_per_img]
                 
-        print(f"  Class {i+1:2d} : {total_samples:7d} | {tot0:5d} | {tot1:5d} | {tot2:7d}")
-        
-    return train_idx, val_idx, test_idx, num_classes, non_empty_classes
+                train_samples.extend(t_samples)
+                val_samples.extend(v_samples)
+
+    # Global shuffle to mix patches from all images
+    random.shuffle(train_samples)
+    random.shuffle(val_samples)
+    
+    print(f"  -> Total Global Train patches: {len(train_samples)}")
+    print(f"  -> Total Global Val patches: {len(val_samples)}")
+    return train_samples, val_samples
 
 
 # -----------------------------------------------------------------
 # PYTORCH - DATASETS
 # -----------------------------------------------------------------
 
-class HyperDataset(Dataset):
+class MultiImageDataset(Dataset):
     """
-    Dataset class that retrieves image patches dynamically from a memory-mapped array.
+    Dataset that retrieves patches dynamically from multiple memory-mapped arrays.
     """
-    def __init__(self, data, truth, samples, H, V, sizex, sizey):
-        self.data = data
-        self.truth = truth
+    def __init__(self, image_paths, samples, H, V, sizex, sizey, transform_flag=False):
+        self.image_paths = image_paths
         self.samples = samples
         self.H = H
         self.V = V
         self.sizex = sizex
         self.sizey = sizey
+        self.transform_flag = transform_flag
         
-        # Data Augmentation specific for aerial/satellite imagery
+        # Initialize memmaps for all images once (acts as virtual pointers, takes ~0 RAM)
+        self.memmaps = []
+        for path in image_paths:
+            # We assume 4 bands, offset 12 for the header
+            mm = np.memmap(path, dtype='int32', mode='r', offset=12, shape=(V, H, 4))
+            self.memmaps.append(mm)
+        
         self.transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip()
@@ -143,16 +132,20 @@ class HyperDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        x = self.samples[idx] % self.H   # column (x)
-        y = self.samples[idx] // self.H   # row (y)
+        # Extract tuple info
+        img_idx, x, y, label = self.samples[idx]
         
-        patch = select_patch(self.data, self.H, self.V, self.sizex, self.sizey, x, y)
+        # Select the correct memory map for this patch
+        data = self.memmaps[img_idx]
         
-        if AUM == 1:
+        # Call your existing select_patch function
+        patch = select_patch(data, self.H, self.V, self.sizex, self.sizey, x, y)
+        
+        if self.transform_flag:
             patch = self.transform(patch)
             
-        # Neural network outputs 0 to N-1, so we subtract 1 from the truth label
-        target_label = self.truth[y, x] - 1
+        # Target label (0-indexed for PyTorch)
+        target_label = label - 1
         
         return patch, target_label
 
@@ -191,3 +184,28 @@ def accuracy_mean_deviation(OA, AA, aa):
     print(f"  OA={OAm:02.02f}±{OAd:02.02f}, AA={AAm:02.02f}±{AAd:02.02f}")
     
     return (OAm, AAm, OAd, AAd, aam, aad)
+
+class EarlyStopping:
+    """
+    Early stops the training if validation loss doesn't improve after a given patience.
+    """
+    def __init__(self, patience=7, min_delta=0, mode='min'):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+        self.mode = mode
+
+    def __call__(self, val_loss):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+        elif (self.mode == 'min' and val_loss > self.best_loss - self.min_delta) or \
+             (self.mode == 'max' and val_loss < self.best_loss + self.min_delta):
+            self.counter += 1
+            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_loss = val_loss
+            self.counter = 0

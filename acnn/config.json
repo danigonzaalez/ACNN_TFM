@@ -1,22 +1,13 @@
 {
-    "models": [
-        "mobilenetv4"
-    ],
     "EXP_NUMBER": 1,
-    "SAMPLES": [100, 50, 100],
-    "EPOCHS": 2,
-    "BATCH": 256,
-    "SIZEX": 32,
-    "DET": 0,
-    "AUM": 1,
-    "ViTsize": 3,
-    "ADA": 3,
-    "TEST": 1,
-    "COMPUTE_SEG_CENTERS": 0,
-    "BASEPATH": ".",
-    "OUTPUTDIR": "./results/",
-    "image_path": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw/GF2_PMS1__L1A0000564539-MSS1.raw",
-    "gt_path": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks/GF2_PMS1__L1A0000564539-MSS1_24label.png",
-    "seg_path": "",
-    "centers_path": ""
+    "train_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw",
+    "train_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks",
+    "test_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw",
+    "test_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks",
+    "SAMPLES": [2000, 500],
+    "TEST_SAMPLES": 2000,
+    "EPOCHS": 50,
+    "BATCH_SIZE": 256,
+    "PATIENCE": 5,
+    "models": ["mobilenetv4"]
 }

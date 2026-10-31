@@ -1,8 +1,0 @@
-matplotlib
-numpy
-pillow
-scikit-learn
-torch
-torchvision
-torchviz
-tqdm

@@ -1,5 +1,7 @@
+import os
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -25,50 +27,37 @@ def calculate_seg_mean_dev(seg_results):
 
     return stats
 
-# COMMENTED: ONLY FOR ANOMALY DETECTION
-# def ad_accuracies(truth, output):
-#     # Anomaly detection metrics
-#     ad_results_dict = {}
 
-#     # Calculate TP, TN, FP, FN
-#     # print count of unique values in output and truth
-#     print(f"Unique values in output: {np.unique(output)}")
-#     print(f"Unique values in truth: {np.unique(truth)}")
-
-#     output = output.flatten()
-#     truth = np.array(truth).flatten()
-#     # Define the positive class you are interested in, e.g., 2
-#     positive_class = 2
-#     negative_class = 1
-
-#     ad_results_dict["TP"] = np.sum(
-#         (output == positive_class) & (truth == positive_class)
-#     )
-#     ad_results_dict["TN"] = np.sum(
-#         (output == negative_class) & (truth == negative_class)
-#     )
-#     ad_results_dict["FP"] = np.sum(
-#         (output == positive_class) & (truth == negative_class)
-#     )
-#     ad_results_dict["FN"] = np.sum(
-#         (output == negative_class) & (truth == positive_class)
-#     )
-
-#     print(
-#         f"TP: {ad_results_dict['TP']}, TN: {ad_results_dict['TN']}, FP: {ad_results_dict['FP']}, FN: {ad_results_dict['FN']}"
-#     )
-
-#     # AUC and % of detected anomalies
-#     detected_anomalies = np.sum((output == 2) & (truth == 2)) / np.sum(truth == 2)
-#     print(f"Detected anomalies: {detected_anomalies}")
-#     ad_results_dict["detected_anomalies"] = detected_anomalies
-#     # AUC
-#     # Compute the ROC curve
-#     from sklearn.metrics import roc_curve, auc
-
-#     fpr, tpr, _ = roc_curve(truth, output, pos_label=positive_class)
-#     roc_auc = auc(fpr, tpr)
-#     print(f"AUC: {roc_auc}")
-#     ad_results_dict["AUC"] = roc_auc
-
-#     return ad_results_dict
+def plot_learning_curves(history, output_dir, exp_number):
+    """
+    Plots and saves the training and validation learning curves.
+    """
+    epochs = range(1, len(history['train_loss']) + 1)
+    
+    plt.figure(figsize=(12, 5))
+    
+    # 1. Plot Loss
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, history['train_loss'], 'b-', label='Train Loss')
+    if len(history['val_loss']) > 0:
+        plt.plot(epochs, history['val_loss'], 'r-', label='Val Loss')
+    plt.title('Loss Evolution')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.7)
+    
+    # 2. Plot Validation Accuracy
+    if len(history['val_acc']) > 0:
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs, history['val_acc'], 'g-', label='Val Accuracy')
+        plt.title('Accuracy Evolution')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.7)
+        
+    plt.tight_layout()
+    plot_path = os.path.join(output_dir, f'learning_curves_exp{exp_number}.png')
+    plt.savefig(plot_path, dpi=300)
+    plt.close()
