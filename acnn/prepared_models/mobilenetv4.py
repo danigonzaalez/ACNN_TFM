@@ -20,15 +20,10 @@ def main(EXP_NUMBER, config):
     TRAIN_GT_DIR = config.get("train_gt_dir")
     TEST_DIR = config.get("test_dir")
     TEST_GT_DIR = config.get("test_gt_dir")
-
-    print(f"* Train Directory: {TRAIN_DIR}")
-    print(f"* Train GT Directory: {TRAIN_GT_DIR}")
-    print(f"* Test Directory: {TEST_DIR}")
-    print(f"* Test GT Directory: {TEST_GT_DIR}")
     
     # SAMPLES format: [train_samples_per_image, val_samples_per_image]
-    SAMPLES = config.get("SAMPLES", [2000, 500]) 
-    TEST_SAMPLES = config.get("TEST_SAMPLES", 2000)
+    SAMPLES = config.get("SAMPLES", [500, 100]) 
+    TEST_SAMPLES = config.get("TEST_SAMPLES", 500)
     EPOCHS = config.get("EPOCHS", 50)
     BATCH_SIZE = config.get("BATCH_SIZE", 256)
     PATIENCE = config.get("PATIENCE", 5)
@@ -36,6 +31,20 @@ def main(EXP_NUMBER, config):
     ADA = config.get("ADA", 3)
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")
     os.makedirs(OUTPUTDIR, exist_ok=True)
+
+    # Config logging
+    print(f"* Train Directory: {TRAIN_DIR}")
+    print(f"* Train GT Directory: {TRAIN_GT_DIR}")
+    print(f"* Test Directory: {TEST_DIR}")
+    print(f"* Test GT Directory: {TEST_GT_DIR}")
+    print(f"* Samples per image (Train/Val): {SAMPLES}")
+    print(f"* Test Samples per image: {TEST_SAMPLES}")
+    print(f"* Patch Size: {SIZEX}x{SIZEX}")
+    print(f"* Epochs: {EPOCHS}")
+    print(f"* Batch Size: {BATCH_SIZE}")
+    print(f"* Early Stopping Patience: {PATIENCE}")
+    print(f"* ADA (LR Scheduler): {ADA}")
+    print(f"* Output Directory: {OUTPUTDIR}")
 
     time_start = time.time()
     
