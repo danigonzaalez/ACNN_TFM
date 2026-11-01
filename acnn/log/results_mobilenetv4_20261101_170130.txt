@@ -1,0 +1,43 @@
+* MobileNetV4 exp: 1
+* Train Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw
+* Train GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks
+* Test Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw
+* Test GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks
+* Device: cuda
+* Building global dataset indexing for Train/Val (120 images)...
+
+* Building global dataset indexing for Test (30 images)...
+
+* Global sampling summary:
+  Num classes: 24
+  Class  # :      total | train |   val |    test
+  Class  1 :  171024615 | 221244 | 55000 |   55009
+  Class  2 :  117323563 | 88009 | 22000 |   32000
+  Class  3 : 1772970218 | 212000 | 53000 |   56000
+  Class  4 :  319047082 | 82000 | 20500 |   24000
+  Class  5 :   44644600 | 166000 | 41201 |   47746
+  Class  6 :  391155734 | 182000 | 45500 |   52000
+  Class  7 :  183575129 | 168757 | 40310 |   54417
+  Class  8 :    2745843 | 56981 | 13000 |   32000
+  Class  9 :   82168119 | 136430 | 32000 |   37058
+  Class 10 :   15340395 | 81931 | 19545 |   34000
+  Class 11 :  241386114 | 210000 | 52500 |   54000
+  Class 12 :  268473894 | 210980 | 52500 |   58000
+  Class 13 :  488567868 | 200000 | 50000 |   56000
+  Class 14 :   39472655 | 219769 | 53901 |   60000
+  Class 15 :   55445468 | 103745 | 25500 |   22000
+  Class 16 :    1779375 | 18770 |  4500 |    6000
+  Class 17 :  208279770 | 220000 | 54742 |   60000
+  Class 18 :  211038009 | 234000 | 58500 |   60000
+  Class 19 :    1019893 | 53941 | 12782 |   28628
+  Class 20 :     996011 | 85901 | 20000 |   31058
+  Class 21 :  171995817 | 240000 | 60000 |   60000
+  Class 22 :   11146463 | 178000 | 44500 |   50000
+  Class 23 :    3734697 | 77155 | 18882 |   36000
+  Class 24 :    4376633 | 34000 |  8500 |   16000
+
+  -> Final Train patches: 3481613
+  -> Final Val patches:   858863
+  -> Final Test patches:  1021916
+
+* Training MobileNetV4, exp.1

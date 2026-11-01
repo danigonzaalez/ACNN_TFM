@@ -73,9 +73,9 @@ def main(EXP_NUMBER, config):
     val_dataset = MultiImageDataset(train_images, val_idx, H, V, SIZEX, SIZEX, transform_flag=False)
     test_dataset = MultiImageDataset(test_images, test_idx, H, V, SIZEX, SIZEX, transform_flag=False)
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=32, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=32, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=32, pin_memory=True)
 
     # 5. Model Definition
     model = timm.create_model(
@@ -200,6 +200,7 @@ def main(EXP_NUMBER, config):
     class_aa = [0.0] + (per_class_metrics['acc'] * 100).tolist()
     
     torch.save(model.state_dict(), os.path.join(OUTPUTDIR, f"model_mobilenetv4_exp{EXP_NUMBER}.ckpt"))
+    print(f"* Model saved to {os.path.join(OUTPUTDIR, f'model_mobilenetv4_exp{EXP_NUMBER}.ckpt')}")
 
     time_end = time.time()
     print(f"* Total time: {time_end - time_start:.0f} s")
