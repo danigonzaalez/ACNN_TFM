@@ -61,3 +61,25 @@ def plot_learning_curves(history, output_dir, exp_number):
     plot_path = os.path.join(output_dir, f'learning_curves_exp{exp_number}.png')
     plt.savefig(plot_path, dpi=300)
     plt.close()
+
+def print_global_sampling_summary(train_stats, test_stats, train_idx, val_idx, test_idx, nclases):
+    """
+    Prints a formatted summary table showing the number of patches/idx extracted per class.
+    """
+    print("* Global sampling summary:")
+    print(f"  Num classes: {nclases}")
+    print("  Class  # :      total | train |   val |    test")
+    
+    for c in range(1, 25):
+        tot = train_stats['total'][c] + test_stats['total'][c]
+        tr = train_stats['s1'][c]
+        vl = train_stats['s2'][c]
+        ts = test_stats['s1'][c]
+        
+        # Uncomment the 'if' condition below if you want to hide classes with zero samples
+        # if tot > 0:
+        print(f"  Class {c:2d} : {tot:10d} | {tr:5d} | {vl:5d} | {ts:7d}")
+            
+    print(f"\n  -> Final Train patches: {len(train_idx)}")
+    print(f"  -> Final Val patches:   {len(val_idx)}")
+    print(f"  -> Final Test patches:  {len(test_idx)}\n")

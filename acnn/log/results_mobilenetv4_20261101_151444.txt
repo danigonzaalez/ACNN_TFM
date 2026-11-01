@@ -1,0 +1,54 @@
+* MobileNetV4 exp: 1
+* Train Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw
+* Train GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks
+* Test Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw
+* Test GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks
+* Device: cuda
+* Building global dataset indexing for Train/Val (120 images)...
+  - Reading mask 1/120  - Reading mask 2/120  - Reading mask 3/120  - Reading mask 4/120  - Reading mask 5/120  - Reading mask 6/120  - Reading mask 7/120  - Reading mask 8/120  - Reading mask 9/120  - Reading mask 10/120  - Reading mask 11/120  - Reading mask 12/120  - Reading mask 13/120  - Reading mask 14/120  - Reading mask 15/120  - Reading mask 16/120  - Reading mask 17/120  - Reading mask 18/120  - Reading mask 19/120  - Reading mask 20/120  - Reading mask 21/120  - Reading mask 22/120  - Reading mask 23/120  - Reading mask 24/120  - Reading mask 25/120  - Reading mask 26/120  - Reading mask 27/120  - Reading mask 28/120  - Reading mask 29/120  - Reading mask 30/120  - Reading mask 31/120  - Reading mask 32/120  - Reading mask 33/120  - Reading mask 34/120  - Reading mask 35/120  - Reading mask 36/120  - Reading mask 37/120  - Reading mask 38/120  - Reading mask 39/120  - Reading mask 40/120  - Reading mask 41/120  - Reading mask 42/120  - Reading mask 43/120  - Reading mask 44/120  - Reading mask 45/120  - Reading mask 46/120  - Reading mask 47/120  - Reading mask 48/120  - Reading mask 49/120  - Reading mask 50/120  - Reading mask 51/120  - Reading mask 52/120  - Reading mask 53/120  - Reading mask 54/120  - Reading mask 55/120  - Reading mask 56/120  - Reading mask 57/120  - Reading mask 58/120  - Reading mask 59/120  - Reading mask 60/120  - Reading mask 61/120  - Reading mask 62/120  - Reading mask 63/120  - Reading mask 64/120  - Reading mask 65/120  - Reading mask 66/120  - Reading mask 67/120  - Reading mask 68/120  - Reading mask 69/120  - Reading mask 70/120  - Reading mask 71/120  - Reading mask 72/120  - Reading mask 73/120  - Reading mask 74/120  - Reading mask 75/120  - Reading mask 76/120  - Reading mask 77/120  - Reading mask 78/120  - Reading mask 79/120  - Reading mask 80/120  - Reading mask 81/120  - Reading mask 82/120  - Reading mask 83/120  - Reading mask 84/120  - Reading mask 85/120  - Reading mask 86/120  - Reading mask 87/120  - Reading mask 88/120  - Reading mask 89/120  - Reading mask 90/120  - Reading mask 91/120  - Reading mask 92/120  - Reading mask 93/120  - Reading mask 94/120  - Reading mask 95/120  - Reading mask 96/120  - Reading mask 97/120  - Reading mask 98/120  - Reading mask 99/120  - Reading mask 100/120  - Reading mask 101/120  - Reading mask 102/120  - Reading mask 103/120  - Reading mask 104/120  - Reading mask 105/120  - Reading mask 106/120  - Reading mask 107/120  - Reading mask 108/120  - Reading mask 109/120  - Reading mask 110/120  - Reading mask 111/120  - Reading mask 112/120  - Reading mask 113/120  - Reading mask 114/120  - Reading mask 115/120  - Reading mask 116/120  - Reading mask 117/120  - Reading mask 118/120  - Reading mask 119/120  - Reading mask 120/120
+* Building global dataset indexing for Test (30 images)...
+  - Reading mask 1/30  - Reading mask 2/30  - Reading mask 3/30  - Reading mask 4/30  - Reading mask 5/30  - Reading mask 6/30  - Reading mask 7/30  - Reading mask 8/30  - Reading mask 9/30  - Reading mask 10/30  - Reading mask 11/30  - Reading mask 12/30  - Reading mask 13/30  - Reading mask 14/30  - Reading mask 15/30  - Reading mask 16/30  - Reading mask 17/30  - Reading mask 18/30  - Reading mask 19/30  - Reading mask 20/30  - Reading mask 21/30  - Reading mask 22/30  - Reading mask 23/30  - Reading mask 24/30  - Reading mask 25/30  - Reading mask 26/30  - Reading mask 27/30  - Reading mask 28/30  - Reading mask 29/30  - Reading mask 30/30
+* Global sampling summary:
+  Num classes: 24
+  Class  # :      total | train |   val |    test
+  Class  1 :  171024615 |  1110 |   555 |     280
+  Class  2 :  117323563 |   449 |   220 |     160
+  Class  3 : 1772970218 |  1060 |   530 |     280
+  Class  4 :  319047082 |   410 |   205 |     120
+  Class  5 :   44644600 |   830 |   415 |     240
+  Class  6 :  391155734 |   910 |   455 |     260
+  Class  7 :  183575129 |   870 |   435 |     280
+  Class  8 :    2745843 |   290 |   145 |     160
+  Class  9 :   82168119 |   700 |   350 |     190
+  Class 10 :   15340395 |   430 |   215 |     170
+  Class 11 :  241386114 |  1050 |   525 |     270
+  Class 12 :  268473894 |  1060 |   530 |     290
+  Class 13 :  488567868 |  1000 |   500 |     280
+  Class 14 :   39472655 |  1110 |   555 |     300
+  Class 15 :   55445468 |   520 |   260 |     110
+  Class 16 :    1779375 |   100 |    50 |      30
+  Class 17 :  208279770 |  1100 |   550 |     300
+  Class 18 :  211038009 |  1170 |   585 |     300
+  Class 19 :    1019893 |   280 |   140 |     150
+  Class 20 :     996011 |   480 |   237 |     160
+  Class 21 :  171995817 |  1200 |   600 |     300
+  Class 22 :   11146463 |   890 |   445 |     250
+  Class 23 :    3734697 |   390 |   195 |     180
+  Class 24 :    4376633 |   170 |    85 |      80
+
+  -> Final Train patches: 17579
+  -> Final Val patches:   8782
+  -> Final Test patches:  5140
+
+* Training MobileNetV4, exp.1
+  Epoch:   1/3 | Train Loss: 3.7451 | Val Loss: 3.1033 | Acc: 0.0671
+  Epoch:   2/3 | Train Loss: 3.0517 | Val Loss: 3.0450 | Acc: 0.0734
+  Epoch:   3/3 | Train Loss: 2.9879 | Val Loss: 3.0199 | Acc: 0.0731
+* Generating learning curves plot...
+* Testing MobileNetV4, exp.1
+* Results exp.1:
+  Pixel Accuracy (OA): 5.37%
+  Mean Accuracy (AA):  4.11%
+  Mean IoU (mIoU):     1.67%
+  Freq Weighted IoU:   2.15%
+* Total time: 3016 s

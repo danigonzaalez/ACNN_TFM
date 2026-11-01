@@ -8,20 +8,23 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import timm
 
-# We no longer need read_rawPV, we use the new MultiImageDataset functions
 from utils.torch_utils import MultiImageDataset, build_global_samples, EarlyStopping, update_lr
 from utils.metrics import SegmentationMetrics
-from utils.general_utils import plot_learning_curves
+from utils.general_utils import plot_learning_curves, print_global_sampling_summary
 
 def main(EXP_NUMBER, config):
-    print("- Using config file")
-    print(f"- MobileNetV4 exp: {EXP_NUMBER}")
+    print(f"* MobileNetV4 exp: {EXP_NUMBER}")
     
     # 1. Directory and parameter configuration from config.json
     TRAIN_DIR = config.get("train_dir")
     TRAIN_GT_DIR = config.get("train_gt_dir")
     TEST_DIR = config.get("test_dir")
     TEST_GT_DIR = config.get("test_gt_dir")
+
+    print(f"* Train Directory: {TRAIN_DIR}")
+    print(f"* Train GT Directory: {TRAIN_GT_DIR}")
+    print(f"* Test Directory: {TEST_DIR}")
+    print(f"* Test GT Directory: {TEST_GT_DIR}")
     
     # SAMPLES format: [train_samples_per_image, val_samples_per_image]
     SAMPLES = config.get("SAMPLES", [2000, 500]) 
@@ -58,8 +61,11 @@ def main(EXP_NUMBER, config):
     nclases = 24 
 
     # 3. Build global indices (spatial subsampling)
-    train_idx, val_idx = build_global_samples(train_masks, H, V, SIZEX, SIZEX, SAMPLES[0], SAMPLES[1])
-    test_idx, _ = build_global_samples(test_masks, H, V, SIZEX, SIZEX, TEST_SAMPLES, 0)
+    train_idx, val_idx, train_stats = build_global_samples(train_masks, H, V, SIZEX, SIZEX, SAMPLES[0], SAMPLES[1], dataset_name="Train/Val")
+    test_idx, _, test_stats = build_global_samples(test_masks, H, V, SIZEX, SIZEX, TEST_SAMPLES, 0, dataset_name="Test")
+
+    # Print the summary table for global sampling
+    print_global_sampling_summary(train_stats, test_stats, train_idx, val_idx, test_idx, nclases)
 
     # 4. Instantiate Datasets and DataLoaders
     # train dataset uses data augmentation (transform_flag=True), val and test do not.
@@ -149,7 +155,7 @@ def main(EXP_NUMBER, config):
             history['val_loss'].append(avg_val_loss)
             history['val_acc'].append(avg_val_acc)
 
-            print(f"  -> Val Loss: {avg_val_loss:.4f}, Val Acc: {avg_val_acc:.4f}")
+            print(f"  Epoch: {epoch+1:3d}/{EPOCHS} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Acc: {avg_val_acc:.4f}")
             
             # Check Early Stopping
             early_stopping(avg_val_loss)
@@ -157,7 +163,7 @@ def main(EXP_NUMBER, config):
                 print(f"  -> Early stopping triggered at epoch {epoch+1}! Model has converged.")
                 break
         else:
-            print(f"  -> Train Loss: {train_loss/len(train_loader):.4f}")
+            print(f"  Epoch: {epoch+1:3d}/{EPOCHS} | Train Loss: {avg_train_loss:.4f}")
 
     # Generate and save learning curves plot
     print("* Generating learning curves plot...")

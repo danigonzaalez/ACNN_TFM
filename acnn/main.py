@@ -1,17 +1,13 @@
 import argparse
 import json
-
-from prepared_models.mobilenetv4 import main as mobilenetv4
-
-
-from utils.torch_utils import accuracy_mean_deviation
-from utils.general_utils import calculate_seg_mean_dev, NumpyEncoder
-
 import contextlib
 import os
 from datetime import datetime
 import numpy as np
 
+from prepared_models.mobilenetv4 import main as mobilenetv4
+from utils.torch_utils import accuracy_mean_deviation
+from utils.general_utils import calculate_seg_mean_dev, NumpyEncoder
 # import plot_results as plr   # utilities for plotting AD graphics using results file
 
 model_functions = {
@@ -33,7 +29,9 @@ def main(config):
 
     print(f"EXP_NUMBER: {EXP_NUMBER}")
     print(f"Train Directory: {config.get('train_dir')}")
+    print(f"Train GT Directory: {config.get('train_gt_dir')}")
     print(f"Test Directory: {config.get('test_dir')}")
+    print(f"Test GT Directory: {config.get('test_gt_dir')}")
 
     for model in models:
         print(f"[{models.index(model) + 1}/{len(models)}] Testing model {model}")
@@ -50,6 +48,7 @@ def main(config):
                 os.makedirs("log", exist_ok=True)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+                #---------- COMMENT TO GET THE PRINTS ON THE TERMINAL ---------
                 with open(f"log/results_{model}_{timestamp}.txt", "w") as f:
                     with contextlib.redirect_stdout(f):
                         result = model_function(EXP_NUMBER, config)
@@ -60,6 +59,18 @@ def main(config):
                         else:
                             OA[exp], AA[exp], aa[exp] = result
                             seg_stats[exp] = None  # Set to None if not present
+                #----------------------------------------------------------------
+
+                # ---------- COMMENT TO GET THE PRINTS ON THE FILE LOG ----------
+                # result = model_function(EXP_NUMBER, config)
+                # # Unpack based on the length of the result
+                # if len(result) == 4:
+                #     OA[exp], AA[exp], aa[exp], seg_stats[exp] = result
+                # else:
+                #     OA[exp], AA[exp], aa[exp] = result
+                #     seg_stats[exp] = None  # Set to None if not present
+                #-------------------------------------------------------------------
+
             except KeyError:
                 print(f"Model {model} not found. Skipping...")
                 # Skip to the next model

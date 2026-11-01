@@ -48,55 +48,66 @@ def select_patch(data, H, V, sizex, sizey, x, y):
     
     return patch
 
-def build_global_samples(mask_paths, H, V, sizex, sizey, samples_train_per_img, samples_val_per_img):
+def build_global_samples(mask_paths, H, V, sizex, sizey, samples_train_per_img, samples_val_per_img, dataset_name="Dataset"):
     """
     Iterates over all masks efficiently and extracts a fixed number of samples per class per image.
-    Returns global lists of tuples: (img_idx, x, y, label)
+    Uses vectorization (numpy) to avoid pure Python bottlenecks.
     """
-    print(f"* Building global dataset indexing from {len(mask_paths)} images...")
+
+    print(f"* Building global dataset indexing for {dataset_name} ({len(mask_paths)} images)...")
     train_samples = []
     val_samples = []
+    
+    # Dictionaries to track stats for the summary table
+    stats = {
+        'total': {c: 0 for c in range(1, 25)},
+        's1': {c: 0 for c in range(1, 25)},
+        's2': {c: 0 for c in range(1, 25)}
+    }
 
     xmin, xmax = int(sizex / 2), H - int(math.ceil(sizex / 2))
     ymin, ymax = int(sizey / 2), V - int(math.ceil(sizey / 2))
 
-    for img_idx, mask_path in enumerate(mask_paths):
-        # Read mask using PIL and convert to numpy
+    for img_idx, mask_path in enumerate(mask_paths):        
         mask = np.array(Image.open(mask_path))
         
-        # Avoid borders and empty pixels using fast numpy vectorization
-        valid_mask = (mask > 0)
-        valid_mask[:ymin, :] = False
-        valid_mask[ymax:, :] = False
-        valid_mask[:, :xmin] = False
-        valid_mask[:, xmax:] = False
-
-        # Get all valid coordinates
-        y_coords, x_coords = np.where(valid_mask)
-        labels = mask[y_coords, x_coords]
-
-        # Group by class (assuming max 24 classes as per dataset spec)
-        class_lists = [[] for _ in range(24)]
-        for y, x, label in zip(y_coords, x_coords, labels):
-            class_lists[label - 1].append((img_idx, x, y, label))
-
-        # Sample limits per image
-        for c in range(24):
-            if len(class_lists[c]) > 0:
-                random.shuffle(class_lists[c])
-                t_samples = class_lists[c][:samples_train_per_img]
-                v_samples = class_lists[c][samples_train_per_img : samples_train_per_img + samples_val_per_img]
+        for c in range(1, 25):
+            c_mask = (mask == c)
+            
+            c_mask[:ymin, :] = False
+            c_mask[ymax:, :] = False
+            c_mask[:, :xmin] = False
+            c_mask[:, xmax:] = False
+            
+            y_coords, x_coords = np.where(c_mask)
+            total_c = len(y_coords)
+            
+            # Save the total number of valid pixels of this class in the image for the summary table
+            stats['total'][c] += total_c
+            
+            if total_c > 0:
+                tot0 = min(total_c, samples_train_per_img)
+                tot1 = min(total_c - tot0, samples_val_per_img)
                 
-                train_samples.extend(t_samples)
-                val_samples.extend(v_samples)
+                # Save how many we have extracted
+                stats['s1'][c] += tot0
+                stats['s2'][c] += tot1
+                
+                chosen_idx = np.random.choice(total_c, tot0 + tot1, replace=False)
+                
+                for i, idx in enumerate(chosen_idx):
+                    y, x = y_coords[idx], x_coords[idx]
+                    if i < tot0:
+                        train_samples.append((img_idx, x, y, c))
+                    else:
+                        val_samples.append((img_idx, x, y, c))
 
-    # Global shuffle to mix patches from all images
+    print()
+    
     random.shuffle(train_samples)
     random.shuffle(val_samples)
     
-    print(f"  -> Total Global Train patches: {len(train_samples)}")
-    print(f"  -> Total Global Val patches: {len(val_samples)}")
-    return train_samples, val_samples
+    return train_samples, val_samples, stats
 
 
 # -----------------------------------------------------------------
