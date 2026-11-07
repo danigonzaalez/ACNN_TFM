@@ -1,6 +1,6 @@
 from terratorch.registry import BACKBONE_REGISTRY
 
-model_name = "timm_prithvi_eo_v2_300_tl"
+model_name = "timm_prithvi_eo_v2_300"
 
 print("Modelo disponible:", model_name in BACKBONE_REGISTRY)
 

@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -62,24 +63,44 @@ def plot_learning_curves(history, output_dir, exp_number):
     plt.savefig(plot_path, dpi=300)
     plt.close()
 
-def print_global_sampling_summary(train_stats, test_stats, train_idx, val_idx, test_idx, nclases):
+
+def generate_rgb_map(output, truth, H, V):
     """
-    Prints a formatted summary table showing the number of patches/idx extracted per class.
+    Generates the RGB classification map based on FiveBillionPixels colors.
     """
-    print("* Global sampling summary:")
-    print(f"  Num classes: {nclases}")
-    print("  Class  # :      total | train |   val |    test")
+    # Label to color mapping (based on the dataset README)
+    color_map = {
+        0: [0, 0, 0],       # unlabeled
+        1: [200, 0, 0],     # industrial area
+        2: [0, 200, 0],     # paddy field
+        3: [150, 250, 0],   # irrigated field
+        4: [150, 200, 150], # dry cropland
+        5: [200, 0, 200],   # garden land
+        6: [150, 0, 250],   # arbor forest
+        7: [150, 150, 250], # shrub forest
+        8: [200, 150, 200], # park
+        9: [250, 200, 0],   # natural meadow
+        10: [200, 200, 0],  # artificial meadow
+        11: [0, 0, 200],    # river
+        12: [250, 0, 150],  # urban residential
+        13: [0, 150, 200],  # lake
+        14: [0, 200, 250],  # pond
+        15: [150, 200, 250],# fish pond
+        16: [250, 250, 250],# snow
+        17: [200, 200, 200],# bareland
+        18: [200, 150, 150],# rural residential
+        19: [250, 200, 150],# stadium
+        20: [150, 150, 0],  # square
+        21: [250, 150, 150],# road
+        22: [250, 150, 0],  # overpass
+        23: [250, 200, 250],# railway station
+        24: [200, 150, 0]   # airport
+    }
     
-    for c in range(1, 25):
-        tot = train_stats['total'][c] + test_stats['total'][c]
-        tr = train_stats['s1'][c]
-        vl = train_stats['s2'][c]
-        ts = test_stats['s1'][c]
+    output_rgb = np.zeros((V, H, 3), dtype=np.uint8)
+    for idx in range(H * V):
+        i, j = divmod(idx, H)
+        pred_class = output[idx]
+        output_rgb[i, j] = color_map.get(pred_class, [0, 0, 0])
         
-        # Uncomment the 'if' condition below if you want to hide classes with zero samples
-        # if tot > 0:
-        print(f"  Class {c:2d} : {tot:10d} | {tr:5d} | {vl:5d} | {ts:7d}")
-            
-    print(f"\n  -> Final Train patches: {len(train_idx)}")
-    print(f"  -> Final Val patches:   {len(val_idx)}")
-    print(f"  -> Final Test patches:  {len(test_idx)}\n")
+    return Image.fromarray(output_rgb, 'RGB')

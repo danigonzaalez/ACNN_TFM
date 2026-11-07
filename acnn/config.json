@@ -4,10 +4,9 @@
     "train_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks",
     "test_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw",
     "test_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks",
-    "SAMPLES": [500, 100],
-    "TEST_SAMPLES": 500,
-    "EPOCHS": 50,
-    "BATCH_SIZE": 256,
+    "SAMPLES": [0.9, 0.1],
+    "EPOCHS": 5,
+    "BATCH_SIZE": 2,
     "PATIENCE": 5,
     "models": ["mobilenetv4"]
 }

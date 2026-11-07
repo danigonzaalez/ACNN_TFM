@@ -1,33 +1,31 @@
 import os
 import time
 import glob
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import timm
+import segmentation_models_pytorch as smp
 
-from utils.torch_utils import MultiImageDataset, build_global_samples, EarlyStopping, update_lr
+from utils.torch_utils import DenseQuarterDataset, EarlyStopping
 from utils.metrics import SegmentationMetrics
-from utils.general_utils import plot_learning_curves, print_global_sampling_summary
+from utils.general_utils import plot_learning_curves
 
 def main(EXP_NUMBER, config):
     print(f"* MobileNetV4 exp: {EXP_NUMBER}")
     
-    # 1. Directory and parameter configuration from config.json
+    # Directory and parameter configuration from config.json
     TRAIN_DIR = config.get("train_dir")
     TRAIN_GT_DIR = config.get("train_gt_dir")
     TEST_DIR = config.get("test_dir")
     TEST_GT_DIR = config.get("test_gt_dir")
-    
-    # SAMPLES format: [train_samples_per_image, val_samples_per_image]
-    SAMPLES = config.get("SAMPLES", [500, 100]) 
-    TEST_SAMPLES = config.get("TEST_SAMPLES", 500)
+
+    # SAMPLES format: [train_proportion, val_proportion]
+    SAMPLES = config.get("SAMPLES", [0.9, 0.1])  # Default: 90% train, 10% validation
     EPOCHS = config.get("EPOCHS", 50)
-    BATCH_SIZE = config.get("BATCH_SIZE", 256)
+    # batch size must be tiny (1, 2, 4) due to the large quarter sizes
+    BATCH_SIZE = config.get("BATCH_SIZE", 2)
     PATIENCE = config.get("PATIENCE", 5)
-    SIZEX = config.get("SIZEX", 32)
     ADA = config.get("ADA", 3)
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")
     os.makedirs(OUTPUTDIR, exist_ok=True)
@@ -37,9 +35,7 @@ def main(EXP_NUMBER, config):
     print(f"* Train GT Directory: {TRAIN_GT_DIR}")
     print(f"* Test Directory: {TEST_DIR}")
     print(f"* Test GT Directory: {TEST_GT_DIR}")
-    print(f"* Samples per image (Train/Val): {SAMPLES}")
-    print(f"* Test Samples per image: {TEST_SAMPLES}")
-    print(f"* Patch Size: {SIZEX}x{SIZEX}")
+    print(f"* Samples proportions: {SAMPLES}")
     print(f"* Epochs: {EPOCHS}")
     print(f"* Batch Size: {BATCH_SIZE}")
     print(f"* Early Stopping Patience: {PATIENCE}")
@@ -56,46 +52,64 @@ def main(EXP_NUMBER, config):
         torch.backends.cudnn.benchmark = True
     print(f"* Device: {device}")
 
-    # 2. Prepare file lists
-    # Ensure images and masks are correctly paired by alphabetical order
-    train_images = sorted(glob.glob(os.path.join(TRAIN_DIR, "*.raw")))
-    train_masks = sorted(glob.glob(os.path.join(TRAIN_GT_DIR, "*.png")))
+    # Prepare files
+    all_train_images = sorted(glob.glob(os.path.join(TRAIN_DIR, "*.raw")))
+    all_train_masks = sorted(glob.glob(os.path.join(TRAIN_GT_DIR, "*.png")))
     test_images = sorted(glob.glob(os.path.join(TEST_DIR, "*.raw")))
     test_masks = sorted(glob.glob(os.path.join(TEST_GT_DIR, "*.png")))
     
-    if len(train_images) == 0 or len(test_images) == 0:
-        raise ValueError("No .raw images found in the specified directories. Please check config.json.")
+    if len(all_train_images) == 0 or len(test_images) == 0:
+        raise ValueError("No .raw images found. Please check config.json directories.")
 
-    H, V = 6908, 7300
-    nclases = 24 
+    H, V, nclases = 6908, 7300, 24
 
-    # 3. Build global indices (spatial subsampling)
-    train_idx, val_idx, train_stats = build_global_samples(train_masks, H, V, SIZEX, SIZEX, SAMPLES[0], SAMPLES[1], dataset_name="Train/Val")
-    test_idx, _, test_stats = build_global_samples(test_masks, H, V, SIZEX, SIZEX, TEST_SAMPLES, 0, dataset_name="Test")
+    # Train / Val Split based on SAMPLES proportion
+    # Combine and shuffle to ensure random distribution of images
+    combined_train = list(zip(all_train_images, all_train_masks))
+    random.seed(42) # Fixed seed for reproducibility across experiments
+    random.shuffle(combined_train)
+    all_train_images, all_train_masks = zip(*combined_train)
+    
+    total_proportion = SAMPLES[0] + SAMPLES[1]
+    val_ratio = SAMPLES[1] / total_proportion if total_proportion > 0 else 0
+    num_val_images = int(len(all_train_images) * val_ratio)
+    
+    if num_val_images > 0:
+        val_images = list(all_train_images[:num_val_images])
+        val_masks = list(all_train_masks[:num_val_images])
+        train_images = list(all_train_images[num_val_images:])
+        train_masks = list(all_train_masks[num_val_images:])
+    else:
+        val_images, val_masks = [], []
+        train_images = list(all_train_images)
+        train_masks = list(all_train_masks)
 
-    # Print the summary table for global sampling
-    print_global_sampling_summary(train_stats, test_stats, train_idx, val_idx, test_idx, nclases)
+    print(f"* Split -> Train images: {len(train_images)} | Val images: {len(val_images)} | Test images: {len(test_images)}")
 
-    # 4. Instantiate Datasets and DataLoaders
-    # train dataset uses data augmentation (transform_flag=True), val and test do not.
-    train_dataset = MultiImageDataset(train_images, train_idx, H, V, SIZEX, SIZEX, transform_flag=True)
-    val_dataset = MultiImageDataset(train_images, val_idx, H, V, SIZEX, SIZEX, transform_flag=False)
-    test_dataset = MultiImageDataset(test_images, test_idx, H, V, SIZEX, SIZEX, transform_flag=False)
+    # Instantiate Datasets and DataLoaders. I/O will be heavy but sequential.
+    train_dataset = DenseQuarterDataset(train_images, train_masks, H, V, transform_flag=True)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+    
+    if len(val_images) > 0:
+        val_dataset = DenseQuarterDataset(val_images, val_masks, H, V, transform_flag=False)
+        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    else:
+        val_loader = None
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=32, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=32, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=32, pin_memory=True)
+    test_dataset = DenseQuarterDataset(test_images, test_masks, H, V, transform_flag=False)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
-    # 5. Model Definition
-    model = timm.create_model(
-        "mobilenetv4_conv_medium",
-        pretrained=False,
-        in_chans=4,
-        num_classes=nclases
+    # Model Definition (SMP FPN + timm MobileNetV4)
+    # Using 'tu-' instructs SMP to use timm, applying features_only=True automatically.
+    model = smp.FPN(
+        encoder_name="tu-mobilenetv4_conv_medium",
+        encoder_weights=None,      # pretrained=False
+        in_channels=4,             # RGB + NIR
+        classes=nclases,           # Automatic classification head included in FPN
     ).to(device)
 
-    # 6. Loss, optimizer, scheduler, and Early Stopping
-    criterion = nn.CrossEntropyLoss()
+    # Loss, optimizer, scheduler, and Early Stopping
+    criterion = nn.CrossEntropyLoss(ignore_index=255)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)
 
     if ADA == 2:
@@ -107,17 +121,14 @@ def main(EXP_NUMBER, config):
 
     early_stopping = EarlyStopping(patience=PATIENCE, min_delta=0.0001)
 
-    # 7. Train the model
-    print(f"* Training MobileNetV4, exp.{EXP_NUMBER}")
-    
-    # Dictionary to store metrics for plotting
+    # Train the model
+    print(f"* Training FPN-MobileNetV4, exp.{EXP_NUMBER}")
     history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
-    
+
     for epoch in range(EPOCHS):
         model.train()
         train_loss = 0.0
         
-        # Progress bar iterating over batches
         for inputs, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [Train]"):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
@@ -131,19 +142,16 @@ def main(EXP_NUMBER, config):
             
             train_loss += loss.item()
 
-        # Calculate average train loss for the epoch
         avg_train_loss = train_loss / len(train_loader)
         history['train_loss'].append(avg_train_loss)
-
+        
         if ADA > 1:
             scheduler.step()
 
-        # Validation phase
-        if len(val_idx) > 0:
+        # Dense validation phase
+        if val_loader is not None:
             model.eval()
-            val_loss = 0.0
-            correct, total = 0, 0
-            
+            val_loss, correct, total = 0.0, 0, 0
             with torch.no_grad():
                 for inputs, labels in tqdm(val_loader, desc=f"Epoch {epoch+1}/{EPOCHS} [Val]"):
                     inputs = inputs.to(device, non_blocking=True)
@@ -153,32 +161,30 @@ def main(EXP_NUMBER, config):
                     loss = criterion(outputs, labels)
                     val_loss += loss.item()
                     
-                    preds = outputs.argmax(dim=-1)
-                    correct += (preds == labels).sum().item()
-                    total += labels.size(0)
+                    preds = outputs.argmax(dim=1) 
+                    
+                    valid_mask = (labels != 255) & (labels >= 0)
+                    correct += (preds[valid_mask] == labels[valid_mask]).sum().item()
+                    total += valid_mask.sum().item()
                     
             avg_val_loss = val_loss / len(val_loader)
-            avg_val_acc = correct / total
+            avg_val_acc = correct / (total + 1e-10)
 
-            # Save validation metrics
             history['val_loss'].append(avg_val_loss)
             history['val_acc'].append(avg_val_acc)
 
             print(f"  Epoch: {epoch+1:3d}/{EPOCHS} | Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f} | Acc: {avg_val_acc:.4f}")
             
-            # Check Early Stopping
             early_stopping(avg_val_loss)
             if early_stopping.early_stop:
-                print(f"  -> Early stopping triggered at epoch {epoch+1}! Model has converged.")
+                print(f"  -> Early stopping triggered at epoch {epoch+1}!")
                 break
         else:
             print(f"  Epoch: {epoch+1:3d}/{EPOCHS} | Train Loss: {avg_train_loss:.4f}")
 
-    # Generate and save learning curves plot
-    print("* Generating learning curves plot...")
     plot_learning_curves(history, OUTPUTDIR, EXP_NUMBER)
 
-    # 8. Test the model
+    # Test the model
     print(f"* Testing MobileNetV4, exp.{EXP_NUMBER}")
     model.eval()
     
@@ -188,7 +194,6 @@ def main(EXP_NUMBER, config):
         for inputs, labels in tqdm(test_loader, desc="Testing"):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            
             outputs = model(inputs)
             metric_calculator.update(outputs, labels)
                 

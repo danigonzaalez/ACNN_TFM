@@ -48,7 +48,6 @@ def main(config):
                 os.makedirs("log", exist_ok=True)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-                #---------- COMMENT TO GET THE PRINTS ON THE TERMINAL ---------
                 with open(f"log/results_{model}_{timestamp}.txt", "w") as f:
                     with contextlib.redirect_stdout(f):
                         result = model_function(EXP_NUMBER, config)
@@ -59,17 +58,6 @@ def main(config):
                         else:
                             OA[exp], AA[exp], aa[exp] = result
                             seg_stats[exp] = None  # Set to None if not present
-                #----------------------------------------------------------------
-
-                # ---------- COMMENT TO GET THE PRINTS ON THE FILE LOG ----------
-                # result = model_function(EXP_NUMBER, config)
-                # # Unpack based on the length of the result
-                # if len(result) == 4:
-                #     OA[exp], AA[exp], aa[exp], seg_stats[exp] = result
-                # else:
-                #     OA[exp], AA[exp], aa[exp] = result
-                #     seg_stats[exp] = None  # Set to None if not present
-                #-------------------------------------------------------------------
 
             except KeyError:
                 print(f"Model {model} not found. Skipping...")

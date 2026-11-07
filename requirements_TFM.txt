@@ -9,8 +9,9 @@ PrithviWxC @ git+https://github.com/NASA-IMPACT/Prithvi-WxC.git@ecfd69b2e94b6505
 granitewxc @ git+https://github.com/IBM/granite-wxc.git@1d180f6d730e26fcd605925f6514f7974122f973
 torchgeo==0.6.1
 
-# Modelos CNN (Necesario para usar MobileNetV4)
+# Modelos CNN y Arquitecturas de Segmentación
 timm==1.0.30
+segmentation-models-pytorch==0.6.0
 
 # Entrenamiento y Métricas
 pytorch-lightning==2.4.0
