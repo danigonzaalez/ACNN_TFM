@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+import torch.nn.functional as F
 from torchvision import transforms
 import math
 import random
@@ -45,6 +46,17 @@ class DenseQuarterDataset(Dataset):
         
         # Read entire mask
         full_mask = np.array(Image.open(self.mask_paths[img_idx]), dtype=np.int64)
+
+        # Correct mask orientation if dimensions are swapped
+        if full_mask.shape == (self.H, self.V):
+            full_mask = full_mask.T
+
+        # Check spatial dimensions
+        if full_image.shape[:2] != full_mask.shape:
+            raise ValueError(
+                f"Dimension mismatch: RAW={full_image.shape[:2]}, "
+                f"MASK={full_mask.shape}"
+            )
         
         # Calculate quarter coordinates (quarter_idx: 0=Top-Left, 1=Top-Right, 2=Bot-Left, 3=Bot-Right)
         mid_H, mid_V = self.H // 2, self.V // 2
@@ -68,6 +80,16 @@ class DenseQuarterDataset(Dataset):
         # Convert to tensors
         img_tensor = torch.FloatTensor(img_q).permute(2, 0, 1)  # (C, H, W)
         mask_tensor = torch.LongTensor(mask_q) - 1              # (H, W), classes 0-23
+
+        # Pad the image and mask to ensure dimensions are multiples of 32
+        # _, h_curr, w_curr = img_tensor.shape
+        # pad_h = (32 - (h_curr % 32)) % 32
+        # pad_w = (32 - (w_curr % 32)) % 32
+        
+        # if pad_h > 0 or pad_w > 0:
+        #     # F.pad expects (pad_left, pad_right, pad_top, pad_bottom)
+        #     img_tensor = F.pad(img_tensor, (0, pad_w, 0, pad_h), mode='constant', value=0.0)
+        #     mask_tensor = F.pad(mask_tensor, (0, pad_w, 0, pad_h), mode='constant', value=255)
         
         # Joint transformations (Image + Mask)
         if self.transform_flag:
