@@ -79,17 +79,21 @@ class DenseQuarterDataset(Dataset):
         
         # Convert to tensors
         img_tensor = torch.FloatTensor(img_q).permute(2, 0, 1)  # (C, H, W)
-        mask_tensor = torch.LongTensor(mask_q) - 1              # (H, W), classes 0-23
+        # (H, W). Classes 1-24 become 0-23, and class 0 becomes 255 (ignore_index)
+        mask_tensor = torch.LongTensor(mask_q)
+        mask_tensor = torch.where(mask_tensor == 0, torch.tensor(255, dtype=torch.long), mask_tensor - 1)
 
-        # Pad the image and mask to ensure dimensions are multiples of 32
-        # _, h_curr, w_curr = img_tensor.shape
-        # pad_h = (32 - (h_curr % 32)) % 32
-        # pad_w = (32 - (w_curr % 32)) % 32
+        # Pad the image and mask to ensure spatial dimensions (V, H) are multiples of 32
+        _, v_curr, h_curr = img_tensor.shape
         
-        # if pad_h > 0 or pad_w > 0:
-        #     # F.pad expects (pad_left, pad_right, pad_top, pad_bottom)
-        #     img_tensor = F.pad(img_tensor, (0, pad_w, 0, pad_h), mode='constant', value=0.0)
-        #     mask_tensor = F.pad(mask_tensor, (0, pad_w, 0, pad_h), mode='constant', value=255)
+        pad_v = (32 - (v_curr % 32)) % 32
+        pad_h = (32 - (h_curr % 32)) % 32
+        
+        if pad_v > 0 or pad_h > 0:
+            # F.pad expects (pad_left, pad_right, pad_top, pad_bottom)
+            # We apply pad_h to the right and pad_v to the bottom
+            img_tensor = F.pad(img_tensor, (0, pad_h, 0, pad_v), mode='constant', value=0.0)
+            mask_tensor = F.pad(mask_tensor, (0, pad_h, 0, pad_v), mode='constant', value=255)
         
         # Joint transformations (Image + Mask)
         if self.transform_flag:

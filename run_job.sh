@@ -17,7 +17,10 @@ source $STORE/env_tfm/bin/activate
 # 3. Move to code directory
 cd $HOME/TFM/acnn
 
-# 4. Execute the training script
+# 4. Set environment variable for PyTorch CUDA memory allocation (avoid memory fragmentation)
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# 5. Execute the training script
 echo "Initiating MobileNetV4 training..."
 python main.py --config config.json
 echo "Training finished."

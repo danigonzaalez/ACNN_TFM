@@ -122,6 +122,9 @@ def main(EXP_NUMBER, config):
 
     early_stopping = EarlyStopping(patience=PATIENCE, min_delta=0.0001)
 
+    # Scaler for mixed precision training (if CUDA is available)
+    scaler = torch.amp.GradScaler("cuda", enabled=cuda)
+
     # Train the model
     print(f"* Training FPN-MobileNetV4, exp.{EXP_NUMBER}")
     history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
@@ -134,12 +137,15 @@ def main(EXP_NUMBER, config):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+
+            with torch.amp.autocast("cuda", enabled=cuda):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
             
             train_loss += loss.item()
 
@@ -158,8 +164,10 @@ def main(EXP_NUMBER, config):
                     inputs = inputs.to(device, non_blocking=True)
                     labels = labels.to(device, non_blocking=True)
                     
-                    outputs = model(inputs)
-                    loss = criterion(outputs, labels)
+                    with torch.amp.autocast("cuda", enabled=cuda):
+                        outputs = model(inputs)
+                        loss = criterion(outputs, labels)
+
                     val_loss += loss.item()
                     
                     preds = outputs.argmax(dim=1) 
@@ -195,7 +203,10 @@ def main(EXP_NUMBER, config):
         for inputs, labels in tqdm(test_loader, desc="Testing"):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            outputs = model(inputs)
+
+            with torch.amp.autocast("cuda", enabled=cuda):
+                outputs = model(inputs)
+                
             metric_calculator.update(outputs, labels)
                 
     # Fetch results

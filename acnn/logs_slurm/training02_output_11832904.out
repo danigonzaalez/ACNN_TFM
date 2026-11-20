@@ -1,0 +1,15 @@
+slurmstepd: info: Setting TMPDIR to /scratch/11832904. Previous errors about TMPDIR can be discarded
+Initiating MobileNetV4 training...
+EXP_NUMBER: 1
+Train Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw
+Train GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks
+Test Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw
+Test GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks
+[1/1] Testing model mobilenetv4
+Experiment 1/1 for model mobilenetv4
+* Means and deviations (1 exp):
+
+Summary of the Segmentation results:
+Model                OA (%)          AA (%)          mIoU (%)        fwIoU (%)      
+mobilenetv4          30.81           4.17            1.28            9.49           
+Training finished.
