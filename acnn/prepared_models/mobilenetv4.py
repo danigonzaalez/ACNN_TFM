@@ -1,6 +1,7 @@
 import os
 import time
 import glob
+import copy
 import random
 import torch
 import torch.nn as nn
@@ -8,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import segmentation_models_pytorch as smp
 
-from utils.torch_utils import DenseQuarterDataset, EarlyStopping
+from utils.torch_utils import DenseQuarterDataset, EarlyStopping, compute_band_percentiles
 from utils.metrics import SegmentationMetrics
 from utils.general_utils import plot_learning_curves
 
@@ -87,17 +88,21 @@ def main(EXP_NUMBER, config):
 
     print(f"* Split -> Train images: {len(train_images)} | Val images: {len(val_images)} | Test images: {len(test_images)}")
 
+    # Compute per-band percentiles (p1, p99) from training images for normalization
+    p_low, p_high = compute_band_percentiles(train_images, H=H, V=V, B=4, q_low=1.0, q_high=99.0)
+    print(f"* Train percentiles p1: {p_low.tolist()} | p99: {p_high.tolist()}")
+
     # Instantiate Datasets and DataLoaders. I/O will be heavy but sequential.
-    train_dataset = DenseQuarterDataset(train_images, train_masks, H, V, transform_flag=True)
+    train_dataset = DenseQuarterDataset(train_images, train_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
     
     if len(val_images) > 0:
-        val_dataset = DenseQuarterDataset(val_images, val_masks, H, V, transform_flag=False)
+        val_dataset = DenseQuarterDataset(val_images, val_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     else:
         val_loader = None
 
-    test_dataset = DenseQuarterDataset(test_images, test_masks, H, V, transform_flag=False)
+    test_dataset = DenseQuarterDataset(test_images, test_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
     # Model Definition (SMP FPN + timm MobileNetV4)
@@ -128,6 +133,10 @@ def main(EXP_NUMBER, config):
     # Train the model
     print(f"* Training FPN-MobileNetV4, exp.{EXP_NUMBER}")
     history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
+
+    # Initialize best model weights for saving the best model based on validation loss
+    best_val_loss = float("inf")
+    best_model_weights = copy.deepcopy(model.state_dict())
 
     for epoch in range(EPOCHS):
         model.train()
@@ -179,6 +188,11 @@ def main(EXP_NUMBER, config):
             avg_val_loss = val_loss / len(val_loader)
             avg_val_acc = correct / (total + 1e-10)
 
+            # Save the best model weights based on validation loss
+            if avg_val_loss < best_val_loss - early_stopping.min_delta:
+                best_val_loss = avg_val_loss
+                best_model_weights = copy.deepcopy(model.state_dict())
+
             history['val_loss'].append(avg_val_loss)
             history['val_acc'].append(avg_val_acc)
 
@@ -190,6 +204,11 @@ def main(EXP_NUMBER, config):
                 break
         else:
             print(f"  Epoch: {epoch+1:3d}/{EPOCHS} | Train Loss: {avg_train_loss:.4f}")
+
+    # Restore best model weights if validation was used
+    if val_loader is not None:
+        model.load_state_dict(best_model_weights)
+        print(f"* Restored best model weights (Val Loss: {best_val_loss:.4f})")
 
     plot_learning_curves(history, OUTPUTDIR, EXP_NUMBER)
 

@@ -16,13 +16,15 @@ class DenseQuarterDataset(Dataset):
     Dataset that loads hyperspectral images into RAM and divides them into 4 quarters.
     Returns dense images (C, H, W) and dense masks (H, W) for semantic segmentation.
     """
-    def __init__(self, image_paths, mask_paths, H=6908, V=7300, B=4, transform_flag=False):
+    def __init__(self, image_paths, mask_paths, H=6908, V=7300, B=4, transform_flag=False, p_low=None, p_high=None):
         self.image_paths = image_paths
         self.mask_paths = mask_paths
         self.H = H
         self.V = V
         self.B = B
         self.transform_flag = transform_flag
+        self.p_low = p_low
+        self.p_high = p_high
         
         self.num_images = len(image_paths)
         self.num_quarters = 4
@@ -74,11 +76,19 @@ class DenseQuarterDataset(Dataset):
             img_q = full_image[mid_V:, mid_H:, :]
             mask_q = full_mask[mid_V:, mid_H:]
             
-        # Normalization and band reordering (B, G, R, NIR -> R, G, B, NIR)
-        img_q = img_q[:, :, [2, 1, 0, 3]].astype(np.float32) / 65535.0
+        # Percentile scaling (p1-p99 from train) clipped to [0.0, 1.0] + band reorder
+        img_q_float = img_q.astype(np.float32)
+        if self.p_low is not None and self.p_high is not None:
+            scale = self.p_high - self.p_low
+            img_q_float = (img_q_float - self.p_low) / scale
+            img_q_float = np.clip(img_q_float, 0.0, 1.0)
+        else:
+            img_q_float = img_q_float / 65535.0
+
+        img_q_norm = img_q_float[:, :, [2, 1, 0, 3]]
         
         # Convert to tensors
-        img_tensor = torch.FloatTensor(img_q).permute(2, 0, 1)  # (C, H, W)
+        img_tensor = torch.FloatTensor(img_q_norm).permute(2, 0, 1)  # (C, H, W)
         # (H, W). Classes 1-24 become 0-23, and class 0 becomes 255 (ignore_index)
         mask_tensor = torch.LongTensor(mask_q)
         mask_tensor = torch.where(mask_tensor == 0, torch.tensor(255, dtype=torch.long), mask_tensor - 1)
@@ -110,6 +120,51 @@ class DenseQuarterDataset(Dataset):
 # -----------------------------------------------------------------
 # PYTORCH - UTILS
 # -----------------------------------------------------------------
+
+def compute_band_percentiles(image_paths, H=6908, V=7300, B=4, q_low=1.0, q_high=99.0, max_pixels_per_quarter=200_000):
+    """
+    Computes per-band (q_low, q_high) percentiles over training images to avoid data leakage.
+    Samples pixels per quarter to keep memory usage and runtime reasonable.
+    """
+    rng = np.random.default_rng(42)
+    samples_per_band = [[] for _ in range(B)]
+    mid_H, mid_V = H // 2, V // 2
+
+    for img_path in image_paths:
+        raw_data = np.fromfile(img_path, dtype="int32", offset=12)
+        full_image = raw_data.reshape((V, H, B))
+
+        quarters = [
+            full_image[:mid_V, :mid_H, :],
+            full_image[:mid_V, mid_H:, :],
+            full_image[mid_V:, :mid_H, :],
+            full_image[mid_V:, mid_H:, :],
+        ]
+
+        for q in quarters:
+            flat_q = q.reshape(-1, B)
+            n_px = flat_q.shape[0]
+            if n_px > max_pixels_per_quarter:
+                idx = rng.choice(n_px, size=max_pixels_per_quarter, replace=False)
+                sampled = flat_q[idx]
+            else:
+                sampled = flat_q
+
+            for b in range(B):
+                samples_per_band[b].append(sampled[:, b])
+
+    p_low = np.zeros(B, dtype=np.float32)
+    p_high = np.zeros(B, dtype=np.float32)
+
+    for b in range(B):
+        band_vals = np.concatenate(samples_per_band[b], axis=0)
+        p_low[b] = np.percentile(band_vals, q_low)
+        p_high[b] = np.percentile(band_vals, q_high)
+        # Avoid division by zero if p_high == p_low
+        if p_high[b] <= p_low[b]:
+            p_high[b] = p_low[b] + 1.0
+
+    return p_low, p_high
 
 def update_lr(optimizer, lr):
     """Updates the learning rate for the optimizer."""
