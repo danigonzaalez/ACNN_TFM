@@ -11,3 +11,7 @@
 - **`prepared_models/mobilenetv4.py`:**
   - Initialized `scaler = torch.amp.GradScaler("cuda", enabled=cuda)`.
   - Wrapped forward pass and loss computation in `torch.amp.autocast("cuda", enabled=cuda)` during training, validation, and testing, and scaled gradients with `scaler` during training.
+
+## Possible Future Problem
+
+Since **Prithvi-EO-V2-300M with UperNetDecoder** is significantly larger than MobileNetV4 and, as a Vision Transformer, requires more VRAM to store intermediate activations, it is expected to have higher memory requirements, especially when processing large image tiles. If a CUDA out-of-memory (OOM) error occurs on the A100, first try reducing the batch size to 1 and enabling automatic mixed precision (AMP). If memory issues persist, switch to smaller image patches (e.g., 1024×1024), preferably using dimensions that are multiples of 32 to ensure compatibility with the FPN architecture. The same patch size should be used for both models to ensure a fair comparison and facilitate knowledge distillation.

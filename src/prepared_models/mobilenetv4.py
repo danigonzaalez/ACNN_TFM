@@ -25,8 +25,8 @@ def main(EXP_NUMBER, config):
     # SAMPLES format: [train_proportion, val_proportion]
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])  # Default: 90% train, 10% validation
     EPOCHS = config.get("EPOCHS", 50)
-    # batch size must be tiny (1, 2, 4) due to the large quarter sizes
-    BATCH_SIZE = config.get("BATCH_SIZE", 2)
+    # batch size must be tiny due to the large quarter sizes
+    BATCH_SIZE = config.get("BATCH_SIZE", 1)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")

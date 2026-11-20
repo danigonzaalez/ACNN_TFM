@@ -76,7 +76,7 @@ class DenseQuarterDataset(Dataset):
             img_q = full_image[mid_V:, mid_H:, :]
             mask_q = full_mask[mid_V:, mid_H:]
             
-        # Percentile scaling (p1-p99 from train) clipped to [0.0, 1.0] + band reorder
+        # Percentile scaling (p1-p99 from train) clipped to [0.0, 1.0] + band reorder (B, G, R, NIR -> R, G, B, NIR)
         img_q_float = img_q.astype(np.float32)
         if self.p_low is not None and self.p_high is not None:
             scale = self.p_high - self.p_low

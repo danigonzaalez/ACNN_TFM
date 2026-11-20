@@ -6,12 +6,15 @@ from datetime import datetime
 import numpy as np
 
 from prepared_models.mobilenetv4 import main as mobilenetv4
+from prepared_models.prithvi import main as prithvi
+
 from utils.torch_utils import accuracy_mean_deviation
 from utils.general_utils import calculate_seg_mean_dev, NumpyEncoder
 # import plot_results as plr   # utilities for plotting AD graphics using results file
 
 model_functions = {
     "mobilenetv4": mobilenetv4,
+    "prithvi": prithvi,
 }
 
 
