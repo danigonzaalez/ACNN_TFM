@@ -19,6 +19,6 @@
     "PRITHVI_LR": 0.0001,
     "PRITHVI_WEIGHT_DECAY": 0.1,
     "DECODER_CHANNELS": 256,
-    "BANDS": ["BLUE", "GREEN", "RED", "NIR_NARROW"],
+    "BANDS": ["RED", "GREEN", "BLUE", "NIR_NARROW"],
     "NECK_INDICES": [5, 11, 17, 23]
 }

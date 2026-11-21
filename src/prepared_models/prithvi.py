@@ -158,8 +158,8 @@ def main(EXP_NUMBER, config):
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")
     os.makedirs(OUTPUTDIR, exist_ok=True)
 
-    # Bands aligned to DenseQuarterDataset output order: [B, G, R, NIR]
-    BANDS = config.get("BANDS", ["BLUE", "GREEN", "RED", "NIR_NARROW"])
+    # Bands aligned to DensePatchDataset output order: [R, G, B, NIR]
+    BANDS = config.get("BANDS", ["RED", "GREEN", "BLUE", "NIR_NARROW"])
     NECK_INDICES = config.get("NECK_INDICES", [5, 11, 17, 23])
 
     print(f"* Train Directory: {TRAIN_DIR}")
