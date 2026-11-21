@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=TFM_mobilenetv4        # Job name for identification
+#SBATCH --job-name=TFM_prithvi        # Job name for identification
 #SBATCH --output=src/logs_slurm/output_%j.out # File to store standard output
 #SBATCH --error=src/logs_slurm/error_%j.err   # File to store error output
 #SBATCH -N 1                              # Request 1 node

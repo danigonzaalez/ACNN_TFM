@@ -12,7 +12,7 @@ from tqdm import tqdm
 from terratorch.registry import BACKBONE_REGISTRY
 from terratorch.models.decoders import UperNetDecoder
 
-from utils.torch_utils import DenseQuarterDataset, EarlyStopping, compute_band_percentiles
+from utils.torch_utils import DensePatchDataset, EarlyStopping, compute_band_percentiles
 from utils.metrics import SegmentationMetrics
 from utils.general_utils import plot_learning_curves
 
@@ -102,6 +102,8 @@ class PrithviUperNet(nn.Module):
         # Backbone forward (some Prithvi backbones accept 4D (B, C, H, W) or 5D (B, C, T, H, W))
         try:
             backbone_out = self.backbone(x)
+        except torch.cuda.OutOfMemoryError:
+            raise
         except Exception:
             backbone_out = self.backbone(x.unsqueeze(2))
 
@@ -145,7 +147,8 @@ def main(EXP_NUMBER, config):
 
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])
     EPOCHS = config.get("EPOCHS", 50)
-    BATCH_SIZE = config.get("BATCH_SIZE", 1)
+    BATCH_SIZE = config.get("BATCH_SIZE", 2)
+    PATCH_SIZE = config.get("PATCH_SIZE", 512)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
     LR = config.get("PRITHVI_LR", 1e-4)
@@ -165,6 +168,7 @@ def main(EXP_NUMBER, config):
     print(f"* Samples proportions: {SAMPLES}")
     print(f"* Epochs: {EPOCHS}")
     print(f"* Batch Size: {BATCH_SIZE}")
+    print(f"* Patch Size: {PATCH_SIZE}")
     print(f"* Learning Rate: {LR} | Weight Decay: {WEIGHT_DECAY}")
     print(f"* Early Stopping Patience: {PATIENCE}")
     print(f"* ADA (LR Scheduler): {ADA}")
@@ -219,29 +223,18 @@ def main(EXP_NUMBER, config):
     p_low, p_high = compute_band_percentiles(train_images, H=H, V=V, B=4, q_low=1.0, q_high=99.0)
     print(f"* Train percentiles p1: {p_low.tolist()} | p99: {p_high.tolist()}")
 
-    train_dataset = DenseQuarterDataset(
-        train_images, train_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high
-    )
-    train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True
-    )
+    # Train, validation, and test datasets and loaders
+    train_dataset = DensePatchDataset(train_images, train_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 
     if len(val_images) > 0:
-        val_dataset = DenseQuarterDataset(
-            val_images, val_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high
-        )
-        val_loader = DataLoader(
-            val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True
-        )
+        val_dataset = DensePatchDataset(val_images, val_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     else:
         val_loader = None
 
-    test_dataset = DenseQuarterDataset(
-        test_images, test_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high
-    )
-    test_loader = DataLoader(
-        test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True
-    )
+    test_dataset = DensePatchDataset(test_images, test_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
     model = PrithviUperNet(
         backbone_name="timm_prithvi_eo_v2_300",

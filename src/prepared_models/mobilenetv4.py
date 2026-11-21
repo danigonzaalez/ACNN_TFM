@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import segmentation_models_pytorch as smp
 
-from utils.torch_utils import DenseQuarterDataset, EarlyStopping, compute_band_percentiles
+from utils.torch_utils import DensePatchDataset, EarlyStopping, compute_band_percentiles
 from utils.metrics import SegmentationMetrics
 from utils.general_utils import plot_learning_curves
 
@@ -25,8 +25,8 @@ def main(EXP_NUMBER, config):
     # SAMPLES format: [train_proportion, val_proportion]
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])  # Default: 90% train, 10% validation
     EPOCHS = config.get("EPOCHS", 50)
-    # batch size must be tiny due to the large quarter sizes
-    BATCH_SIZE = config.get("BATCH_SIZE", 1)
+    BATCH_SIZE = config.get("BATCH_SIZE", 2)
+    PATCH_SIZE = config.get("PATCH_SIZE", 512)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")
@@ -40,6 +40,7 @@ def main(EXP_NUMBER, config):
     print(f"* Samples proportions: {SAMPLES}")
     print(f"* Epochs: {EPOCHS}")
     print(f"* Batch Size: {BATCH_SIZE}")
+    print(f"* Patch Size: {PATCH_SIZE}")
     print(f"* Early Stopping Patience: {PATIENCE}")
     print(f"* ADA (LR Scheduler): {ADA}")
     print(f"* Output Directory: {OUTPUTDIR}")
@@ -93,16 +94,16 @@ def main(EXP_NUMBER, config):
     print(f"* Train percentiles p1: {p_low.tolist()} | p99: {p_high.tolist()}")
 
     # Instantiate Datasets and DataLoaders. I/O will be heavy but sequential.
-    train_dataset = DenseQuarterDataset(train_images, train_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
+    train_dataset = DensePatchDataset(train_images, train_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
     
     if len(val_images) > 0:
-        val_dataset = DenseQuarterDataset(val_images, val_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
+        val_dataset = DensePatchDataset(val_images, val_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     else:
         val_loader = None
 
-    test_dataset = DenseQuarterDataset(test_images, test_masks, H, V, transform_flag=False, p_low=p_low, p_high=p_high)
+    test_dataset = DensePatchDataset(test_images, test_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
     # Model Definition (SMP FPN + timm MobileNetV4)

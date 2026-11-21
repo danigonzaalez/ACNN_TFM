@@ -1,0 +1,11 @@
+slurmstepd: info: Setting TMPDIR to /scratch/11871498. Previous errors about TMPDIR can be discarded
+Initiating training...
+EXP_NUMBER: 1
+Train Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_16bit_raw
+Train GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks
+Test Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw
+Test GT Directory: /mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks
+[1/1] Testing model prithvi
+Experiment 1/1 for model prithvi
+An error occurred while testing model prithvi: CUDA out of memory. Tried to allocate 196.00 MiB. GPU 0 has a total capacity of 39.49 GiB of which 1.50 MiB is free. Including non-PyTorch memory, this process has 39.48 GiB memory in use. Of the allocated memory 38.96 GiB is allocated by PyTorch, and 16.18 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Training finished.
