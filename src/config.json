@@ -13,6 +13,9 @@
     "ADA": 3,
     "OUTPUTDIR": "./results/",
 
+    "MOBILENETV4_EPOCHS": 5,
+
+    "PRITHVI_EPOCHS": 3,
     "PRITHVI_LR": 0.0001,
     "PRITHVI_WEIGHT_DECAY": 0.1,
     "DECODER_CHANNELS": 256,

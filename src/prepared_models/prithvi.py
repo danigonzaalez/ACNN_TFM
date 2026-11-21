@@ -146,7 +146,8 @@ def main(EXP_NUMBER, config):
     TEST_GT_DIR = config.get("test_gt_dir")
 
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])
-    EPOCHS = config.get("EPOCHS", 50)
+    default_epochs = config.get("EPOCHS", 50)
+    EPOCHS = config.get("PRITHVI_EPOCHS", default_epochs)
     BATCH_SIZE = config.get("BATCH_SIZE", 2)
     PATCH_SIZE = config.get("PATCH_SIZE", 512)
     PATIENCE = config.get("PATIENCE", 5)

@@ -24,7 +24,8 @@ def main(EXP_NUMBER, config):
 
     # SAMPLES format: [train_proportion, val_proportion]
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])  # Default: 90% train, 10% validation
-    EPOCHS = config.get("EPOCHS", 50)
+    default_epochs = config.get("EPOCHS", 50)
+    EPOCHS = config.get("MOBILENETV4_EPOCHS", default_epochs)
     BATCH_SIZE = config.get("BATCH_SIZE", 2)
     PATCH_SIZE = config.get("PATCH_SIZE", 512)
     PATIENCE = config.get("PATIENCE", 5)
