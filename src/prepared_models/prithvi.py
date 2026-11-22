@@ -3,6 +3,7 @@ import copy
 import glob
 import random
 import time
+import json
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,7 +13,7 @@ from tqdm import tqdm
 from terratorch.registry import BACKBONE_REGISTRY
 from terratorch.models.decoders import UperNetDecoder
 
-from utils.torch_utils import DensePatchDataset, EarlyStopping, compute_band_percentiles
+from utils.torch_utils import PreextractedPatchDataset, EarlyStopping
 from utils.metrics import SegmentationMetrics
 from utils.general_utils import plot_learning_curves
 
@@ -140,16 +141,14 @@ def main(EXP_NUMBER, config):
     print(f"* Prithvi exp: {EXP_NUMBER}")
 
     # Directory and parameter configuration from config.json
-    TRAIN_DIR = config.get("train_dir")
-    TRAIN_GT_DIR = config.get("train_gt_dir")
-    TEST_DIR = config.get("test_dir")
-    TEST_GT_DIR = config.get("test_gt_dir")
+    raw_patches_dir = config.get("PATCHES_DIR", "$STORE/patches_1024")
+    PATCHES_DIR = os.path.expandvars(raw_patches_dir)
 
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])
     default_epochs = config.get("EPOCHS", 50)
     EPOCHS = config.get("PRITHVI_EPOCHS", default_epochs)
-    BATCH_SIZE = config.get("BATCH_SIZE", 2)
-    PATCH_SIZE = config.get("PATCH_SIZE", 512)
+    BATCH_SIZE = config.get("BATCH_SIZE", 8)
+    PATCH_SIZE = config.get("PATCH_SIZE", 1024)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
     LR = config.get("PRITHVI_LR", 1e-4)
@@ -158,14 +157,11 @@ def main(EXP_NUMBER, config):
     OUTPUTDIR = config.get("OUTPUTDIR", "./results/")
     os.makedirs(OUTPUTDIR, exist_ok=True)
 
-    # Bands aligned to DensePatchDataset output order: [R, G, B, NIR]
+    # Bands aligned to pre-extracted patch channel order: [R, G, B, NIR]
     BANDS = config.get("BANDS", ["RED", "GREEN", "BLUE", "NIR_NARROW"])
     NECK_INDICES = config.get("NECK_INDICES", [5, 11, 17, 23])
 
-    print(f"* Train Directory: {TRAIN_DIR}")
-    print(f"* Train GT Directory: {TRAIN_GT_DIR}")
-    print(f"* Test Directory: {TEST_DIR}")
-    print(f"* Test GT Directory: {TEST_GT_DIR}")
+    print(f"* Patches Directory: {PATCHES_DIR}")
     print(f"* Samples proportions: {SAMPLES}")
     print(f"* Epochs: {EPOCHS}")
     print(f"* Batch Size: {BATCH_SIZE}")
@@ -185,57 +181,42 @@ def main(EXP_NUMBER, config):
         torch.backends.cudnn.benchmark = True
     print(f"* Device: {device}")
 
-    all_train_images = sorted(glob.glob(os.path.join(TRAIN_DIR, "*.raw")))
-    all_train_masks = sorted(glob.glob(os.path.join(TRAIN_GT_DIR, "*.png")))
-    test_images = sorted(glob.glob(os.path.join(TEST_DIR, "*.raw")))
-    test_masks = sorted(glob.glob(os.path.join(TEST_GT_DIR, "*.png")))
+    nclases = 24
 
-    if len(all_train_images) == 0 or len(test_images) == 0:
-        raise ValueError("No .raw images found. Please check config.json directories.")
+    # Read metadata.json if present to log pre-extracted percentiles and image counts
+    meta_path = os.path.join(PATCHES_DIR, "metadata.json")
 
-    H, V, nclases = 6908, 7300, 24
+    if os.path.isfile(meta_path):
+        with open(meta_path, "r") as mf:
+            meta = json.load(mf)
+        print(
+            f"* Metadata -> Train imgs: {meta.get('num_train_images')} | "
+            f"Val imgs: {meta.get('num_val_images')} | Test imgs: {meta.get('num_test_images')}"
+        )
+        print(f"* Train percentiles p1: {meta.get('p_low')} | p99: {meta.get('p_high')}")
 
-    # Same deterministic split as MobileNetV4
-    combined_train = list(zip(all_train_images, all_train_masks))
-    random.seed(42)
-    random.shuffle(combined_train)
-    all_train_images, all_train_masks = zip(*combined_train)
+    # Pre-extracted patch directories per split
+    train_patches_dir = os.path.join(PATCHES_DIR, "train")
+    val_patches_dir = os.path.join(PATCHES_DIR, "val")
+    test_patches_dir = os.path.join(PATCHES_DIR, "test")
 
-    total_proportion = SAMPLES[0] + SAMPLES[1]
-    val_ratio = SAMPLES[1] / total_proportion if total_proportion > 0 else 0
-    num_val_images = int(len(all_train_images) * val_ratio)
-
-    if num_val_images > 0:
-        val_images = list(all_train_images[:num_val_images])
-        val_masks = list(all_train_masks[:num_val_images])
-        train_images = list(all_train_images[num_val_images:])
-        train_masks = list(all_train_masks[num_val_images:])
-    else:
-        val_images, val_masks = [], []
-        train_images = list(all_train_images)
-        train_masks = list(all_train_masks)
-
-    print(
-        f"* Split -> Train images: {len(train_images)} | "
-        f"Val images: {len(val_images)} | Test images: {len(test_images)}"
-    )
-
-    # Compute per-band percentiles (p1, p99) strictly on train images to avoid leakage
-    p_low, p_high = compute_band_percentiles(train_images, H=H, V=V, B=4, q_low=1.0, q_high=99.0)
-    print(f"* Train percentiles p1: {p_low.tolist()} | p99: {p_high.tolist()}")
-
-    # Train, validation, and test datasets and loaders
-    train_dataset = DensePatchDataset(train_images, train_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+    train_dataset = PreextractedPatchDataset(train_patches_dir, transform_flag=False)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 
-    if len(val_images) > 0:
-        val_dataset = DensePatchDataset(val_images, val_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+    if os.path.isdir(val_patches_dir) and len(os.listdir(val_patches_dir)) > 0:
+        val_dataset = PreextractedPatchDataset(val_patches_dir, transform_flag=False)
         val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     else:
         val_loader = None
 
-    test_dataset = DensePatchDataset(test_images, test_masks, H, V, patch_size=PATCH_SIZE, transform_flag=False, p_low=p_low, p_high=p_high)
+    test_dataset = PreextractedPatchDataset(test_patches_dir, transform_flag=False)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+
+    val_len = len(val_dataset) if val_loader is not None else 0
+    print(
+        f"* Split patches -> Train: {len(train_dataset)} | "
+        f"Val: {val_len} | Test: {len(test_dataset)}"
+    )
 
     model = PrithviUperNet(
         backbone_name="timm_prithvi_eo_v2_300",

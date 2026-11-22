@@ -1,3 +1,5 @@
+import glob
+import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -10,6 +12,48 @@ from PIL import Image
 # -----------------------------------------------------------------
 # PYTORCH - DATASETS
 # -----------------------------------------------------------------
+
+class PreextractedPatchDataset(Dataset):
+    """
+    Dataset that loads pre-extracted image patches (*_img.npy) and mask patches
+    (*_mask.npy) from disk for fast semantic segmentation training and evaluation.
+    """
+    def __init__(self, patches_dir, transform_flag=False):
+        self.patches_dir = patches_dir
+        self.transform_flag = transform_flag
+
+        self.img_paths = sorted(glob.glob(os.path.join(patches_dir, "*_img.npy")))
+        self.mask_paths = sorted(glob.glob(os.path.join(patches_dir, "*_mask.npy")))
+
+        if len(self.img_paths) == 0:
+            raise ValueError(f"No '*_img.npy' patch files found in directory: {patches_dir}")
+        if len(self.img_paths) != len(self.mask_paths):
+            raise ValueError(
+                f"Mismatch between number of image patches ({len(self.img_paths)}) "
+                f"and mask patches ({len(self.mask_paths)}) in {patches_dir}"
+            )
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        # Load pre-normalized patch (C, P, P) and remapped mask (P, P)
+        img_np = np.load(self.img_paths[idx])
+        mask_np = np.load(self.mask_paths[idx])
+
+        img_tensor = torch.from_numpy(img_np).float()
+        mask_tensor = torch.from_numpy(mask_np).long()
+
+        # Joint transformations (Image + Mask)
+        if self.transform_flag:
+            if random.random() > 0.5:
+                img_tensor = torch.flip(img_tensor, dims=[2])  # Horizontal Flip (W)
+                mask_tensor = torch.flip(mask_tensor, dims=[1])
+            if random.random() > 0.5:
+                img_tensor = torch.flip(img_tensor, dims=[1])  # Vertical Flip (H)
+                mask_tensor = torch.flip(mask_tensor, dims=[0])
+
+        return img_tensor, mask_tensor
 
 class DensePatchDataset(Dataset):
     """
