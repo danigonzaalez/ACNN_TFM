@@ -1,0 +1,6 @@
+slurmstepd: info: Setting TMPDIR to /scratch/11923001. Previous errors about TMPDIR can be discarded
+Initiating patch pre-extraction...
+* Computed train percentiles p1: [205.0, 152.0, 89.0, 62.0] | p99: [732.0, 598.0, 552.0, 672.0]
+* Saving pre-extracted patches (size=1024) to: /mnt/netapp2/Store_uni//home/usc/ci/dgf/patches_1024
+* Pre-extraction completed successfully.
+Patch pre-extraction finished.

@@ -4,6 +4,7 @@ import contextlib
 import os
 from datetime import datetime
 import numpy as np
+import torch
 
 from prepared_models.mobilenetv4 import main as mobilenetv4
 from prepared_models.prithvi import main as prithvi
@@ -66,6 +67,9 @@ def main(config):
                 print(f"Model {model} not found. Skipping...")
                 # Skip to the next model
                 continue
+            except torch.cuda.OutOfMemoryError:
+                print(f"CUDA OutOfMemoryError during model {model} (exp {EXP_NUMBER}). Aborting.")
+                raise
             except Exception as e:
                 print(f"An error occurred while testing model {model}: {e}")
                 # print traceback

@@ -159,7 +159,7 @@ def main():
     if len(test_images) == 0 or len(test_masks) == 0:
         raise ValueError("No test images or masks found.")
 
-    p_low, p_high = compute_band_percentiles(train_images, H=H, V=V, B=B, q_low=1.0, q_high=99.0)
+    p_low, p_high = compute_band_percentiles(train_images, H=H, V=V, B=B, q_low=1.0, q_high=99.0, max_pixels_per_image=2_000_000)
     print(f"* Computed train percentiles p1: {p_low.tolist()} | p99: {p_high.tolist()}")
     print(f"* Saving pre-extracted patches (size={patch_size}) to: {out_root}")
 

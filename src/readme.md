@@ -40,24 +40,49 @@ The `config.json` file centralizes dataset paths, train/validation split proport
     "train_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/train_grayscale_masks",
     "test_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_16bit_raw",
     "test_gt_dir": "/mnt/lustre/scratch/nlsas/home/usc/ci/dgf/FiveBillionPixels/test_grayscale_masks",
+    "PATCHES_DIR": "$STORE/patches_1024",
     "SAMPLES": [0.9, 0.1],
-    "EPOCHS": 1,
-    "BATCH_SIZE": 1,
+    "EPOCHS": 3,
+    "BATCH_SIZE": 4,
+    "PATCH_SIZE": 1024,
     "PATIENCE": 5,
     "ADA": 3,
     "OUTPUTDIR": "./results/",
 
+    "MOBILENETV4_EPOCHS": 50,
+    "MOBILENETV4_BATCH_SIZE": 4,
+
+    "PRITHVI_EPOCHS": 3,
+    "PRITHVI_BATCH_SIZE": 4,
     "PRITHVI_LR": 0.0001,
     "PRITHVI_WEIGHT_DECAY": 0.1,
     "DECODER_CHANNELS": 256,
-    "BANDS": ["BLUE", "GREEN", "RED", "NIR_NARROW"],
+    "BANDS": ["RED", "GREEN", "BLUE", "NIR_NARROW"],
     "NECK_INDICES": [5, 11, 17, 23]
 }
 ```
 
 ## 4. Execution
 
-### Local or Interactive Compute Node
+Run the pipeline in **two stages**: first pre-extract normalized patches (`*_img.npy` and `*_mask.npy`) and per-band training percentiles (`metadata.json`) into `$STORE`, and then launch model training runs.
+
+### Step 1: Pre-extract Patches ($STORE)
+
+Before training, generate the pre-extracted patches required by the training dataloaders:
+
+```bash
+python preextract_patches.py --config config.json
+```
+
+Or via Slurm:
+
+```bash
+sbatch run_preextract.sh
+```
+
+### Step 2: Train Models
+
+Once patch pre-extraction completes, run training locally or on a compute node:
 
 ```bash
 python main.py --config config.json
@@ -69,18 +94,17 @@ You can also override the model list from the command line:
 python main.py --config config.json --models mobilenetv4
 ```
 
-### Cluster Execution via Slurm
-
-For GPU training runs (e.g., NVIDIA A100), submit the job with `sbatch`:
+Or submit training jobs via Slurm (for GPU training runs, e.g., NVIDIA A100):
 
 ```bash
 sbatch run_job.sh
 ```
 
-**Note:** Make sure `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` is exported in your launch script when training with small batch sizes and large spatial dimensions.
+**Note:** Make sure `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` is exported in your launch script when training with small batch sizes and large spatial dimensions (`1024x1024`)
 
 ## 5. Outputs & Tracking
 
+- Pre-extracted patches & percentile metadata: `$STORE/patches_1024/` (or configured `PATCHES_DIR`)
 - Per-model/experiment logs: `log/results_<model>_<timestamp>.txt`
 - Slurm job logs: `logs_slurm/` (depending on your `run_job.sh` configuration)
 - Global metrics (JSON), checkpoints, and learning curves: `results/` (or the path specified in `OUTPUTDIR`)

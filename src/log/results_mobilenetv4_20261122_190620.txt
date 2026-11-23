@@ -1,0 +1,40 @@
+* MobileNetV4 exp: 1
+* Patches Directory: /mnt/netapp2/Store_uni//home/usc/ci/dgf/patches_1024
+* Samples proportions: [0.9, 0.1]
+* Epochs: 50
+* Batch Size: 4
+* Patch Size: 1024
+* Early Stopping Patience: 5
+* ADA (LR Scheduler): 3
+* Output Directory: ./results/
+* Device: cuda
+* Metadata -> Train imgs: 108 | Val imgs: 12 | Test imgs: 30
+* Train percentiles p1: [205.0, 152.0, 89.0, 62.0] | p99: [732.0, 598.0, 552.0, 672.0]
+* Split patches -> Train: 6048 | Val: 672 | Test: 1680
+* Training FPN-MobileNetV4, exp.1
+  Epoch:   1/50 | Train Loss: 2.1679 | Val Loss: 2.1029 | Acc: 0.4021
+  Epoch:   2/50 | Train Loss: 1.9312 | Val Loss: 2.4680 | Acc: 0.3441
+EarlyStopping counter: 1 out of 5
+  Epoch:   3/50 | Train Loss: 1.8469 | Val Loss: 2.3071 | Acc: 0.4340
+EarlyStopping counter: 2 out of 5
+  Epoch:   4/50 | Train Loss: 1.8049 | Val Loss: 2.0725 | Acc: 0.4334
+  Epoch:   5/50 | Train Loss: 1.7711 | Val Loss: 2.6156 | Acc: 0.4091
+EarlyStopping counter: 1 out of 5
+  Epoch:   6/50 | Train Loss: 1.7510 | Val Loss: 2.1613 | Acc: 0.4280
+EarlyStopping counter: 2 out of 5
+  Epoch:   7/50 | Train Loss: 1.7113 | Val Loss: 2.6347 | Acc: 0.3507
+EarlyStopping counter: 3 out of 5
+  Epoch:   8/50 | Train Loss: 1.7022 | Val Loss: 2.3829 | Acc: 0.4590
+EarlyStopping counter: 4 out of 5
+  Epoch:   9/50 | Train Loss: 1.6680 | Val Loss: 2.4874 | Acc: 0.3890
+EarlyStopping counter: 5 out of 5
+  -> Early stopping triggered at epoch 9!
+* Restored best model weights (Val Loss: 2.0725)
+* Testing MobileNetV4, exp.1
+* Results exp.1:
+  Pixel Accuracy (OA): 32.18%
+  Mean Accuracy (AA):  8.03%
+  Mean IoU (mIoU):     4.59%
+  Freq Weighted IoU:   14.64%
+* Model saved to ./results/model_mobilenetv4_exp1.ckpt
+* Total time: 2041 s

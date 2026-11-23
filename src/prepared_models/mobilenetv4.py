@@ -23,9 +23,13 @@ def main(EXP_NUMBER, config):
 
     # SAMPLES format: [train_proportion, val_proportion]
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])  # Default: 90% train, 10% validation
+
     default_epochs = config.get("EPOCHS", 50)
     EPOCHS = config.get("MOBILENETV4_EPOCHS", default_epochs)
-    BATCH_SIZE = config.get("BATCH_SIZE", 8)
+
+    default_batch_size = config.get("BATCH_SIZE", 4)
+    BATCH_SIZE = config.get("MOBILENETV4_BATCH_SIZE", default_batch_size)
+
     PATCH_SIZE = config.get("PATCH_SIZE", 1024)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
@@ -110,9 +114,6 @@ def main(EXP_NUMBER, config):
 
     early_stopping = EarlyStopping(patience=PATIENCE, min_delta=0.0001)
 
-    # Scaler for mixed precision training (if CUDA is available)
-    scaler = torch.amp.GradScaler("cuda", enabled=cuda)
-
     # Train the model
     print(f"* Training FPN-MobileNetV4, exp.{EXP_NUMBER}")
     history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
@@ -130,14 +131,10 @@ def main(EXP_NUMBER, config):
             labels = labels.to(device, non_blocking=True)
 
             optimizer.zero_grad()
-
-            with torch.amp.autocast("cuda", enabled=cuda):
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
             
             train_loss += loss.item()
 
@@ -156,9 +153,8 @@ def main(EXP_NUMBER, config):
                     inputs = inputs.to(device, non_blocking=True)
                     labels = labels.to(device, non_blocking=True)
                     
-                    with torch.amp.autocast("cuda", enabled=cuda):
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
 
                     val_loss += loss.item()
                     
@@ -206,9 +202,8 @@ def main(EXP_NUMBER, config):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
-            with torch.amp.autocast("cuda", enabled=cuda):
-                outputs = model(inputs)
-                
+            outputs = model(inputs)
+            
             metric_calculator.update(outputs, labels)
                 
     # Fetch results

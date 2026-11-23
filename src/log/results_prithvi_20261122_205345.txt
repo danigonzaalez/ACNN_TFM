@@ -1,0 +1,29 @@
+* Prithvi exp: 1
+* Patches Directory: /mnt/netapp2/Store_uni//home/usc/ci/dgf/patches_1024
+* Samples proportions: [0.9, 0.1]
+* Epochs: 3
+* Batch Size: 4
+* Patch Size: 1024
+* Learning Rate: 0.0001 | Weight Decay: 0.1
+* Early Stopping Patience: 5
+* ADA (LR Scheduler): 3
+* Bands: ['RED', 'GREEN', 'BLUE', 'NIR_NARROW'] | Neck Indices: [5, 11, 17, 23]
+* Output Directory: ./results/
+* Device: cuda
+* Metadata -> Train imgs: 108 | Val imgs: 12 | Test imgs: 30
+* Train percentiles p1: [205.0, 152.0, 89.0, 62.0] | p99: [732.0, 598.0, 552.0, 672.0]
+* Split patches -> Train: 6048 | Val: 672 | Test: 1680
+* Training Prithvi-EO-V2-300 (UperNetDecoder), exp.1
+  Epoch:   1/3 | Train Loss: 2.1079 | Val Loss: 2.7186 | Acc: 0.1656
+  Epoch:   2/3 | Train Loss: 1.8893 | Val Loss: 2.7514 | Acc: 0.2173
+EarlyStopping counter: 1 out of 5
+  Epoch:   3/3 | Train Loss: 1.7688 | Val Loss: 2.2833 | Acc: 0.4171
+* Restored best model weights (Val Loss: 2.2833)
+* Testing Prithvi-EO-V2-300 (UperNetDecoder), exp.1
+* Results exp.1:
+  Pixel Accuracy (OA): 34.18%
+  Mean Accuracy (AA):  7.79%
+  Mean IoU (mIoU):     4.41%
+  Freq Weighted IoU:   15.71%
+* Model saved to ./results/model_prithvi_exp1.ckpt
+* Total time: 15984 s

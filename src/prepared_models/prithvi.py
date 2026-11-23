@@ -145,9 +145,13 @@ def main(EXP_NUMBER, config):
     PATCHES_DIR = os.path.expandvars(raw_patches_dir)
 
     SAMPLES = config.get("SAMPLES", [0.9, 0.1])
+
     default_epochs = config.get("EPOCHS", 50)
     EPOCHS = config.get("PRITHVI_EPOCHS", default_epochs)
-    BATCH_SIZE = config.get("BATCH_SIZE", 8)
+
+    default_batch_size = config.get("BATCH_SIZE", 4)
+    BATCH_SIZE = config.get("PRITHVI_BATCH_SIZE", default_batch_size)
+
     PATCH_SIZE = config.get("PATCH_SIZE", 1024)
     PATIENCE = config.get("PATIENCE", 5)
     ADA = config.get("ADA", 3)
@@ -244,7 +248,6 @@ def main(EXP_NUMBER, config):
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
     early_stopping = EarlyStopping(patience=PATIENCE, min_delta=0.0001)
-    scaler = torch.amp.GradScaler("cuda", enabled=cuda)
 
     print(f"* Training Prithvi-EO-V2-300 (UperNetDecoder), exp.{EXP_NUMBER}")
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
@@ -261,14 +264,10 @@ def main(EXP_NUMBER, config):
             labels = labels.to(device, non_blocking=True)
 
             optimizer.zero_grad()
-
-            with torch.amp.autocast("cuda", enabled=cuda):
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
             train_loss += loss.item()
 
@@ -286,9 +285,8 @@ def main(EXP_NUMBER, config):
                     inputs = inputs.to(device, non_blocking=True)
                     labels = labels.to(device, non_blocking=True)
 
-                    with torch.amp.autocast("cuda", enabled=cuda):
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
 
                     val_loss += loss.item()
 
@@ -335,8 +333,7 @@ def main(EXP_NUMBER, config):
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
-            with torch.amp.autocast("cuda", enabled=cuda):
-                outputs = model(inputs)
+            outputs = model(inputs)
 
             metric_calculator.update(outputs, labels)
 
